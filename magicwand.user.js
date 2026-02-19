@@ -822,10 +822,151 @@
         originalImg.setAttribute('data-original-src', originalSrc);
     }
 
+    // 显示设置面板
+    function showSettingsPanel() {
+        const config = state.config;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'mw-settings-overlay';
+
+        const allPrompts = [...config.presetPrompts, ...config.customPrompts];
+
+        let promptsHtml = '';
+        allPrompts.forEach((p, i) => {
+            const isPreset = i < config.presetPrompts.length;
+            promptsHtml += `
+                <div class="mw-prompt-item" data-index="${i}" data-preset="${isPreset}">
+                    <div class="mw-prompt-info">
+                        <div class="mw-prompt-name">${p.name}</div>
+                        <div class="mw-prompt-text">${p.prompt}</div>
+                    </div>
+                    ${!isPreset ? `<button class="mw-prompt-delete" data-index="${i - config.presetPrompts.length}">删除</button>` : ''}
+                </div>
+            `;
+        });
+
+        overlay.innerHTML = `
+            <div class="mw-settings-panel">
+                <div class="mw-settings-title">魔法编辑设置</div>
+
+                <div class="mw-settings-group">
+                    <label class="mw-settings-label">API 端点地址</label>
+                    <input type="text" class="mw-settings-input mw-api-url" value="${config.apiUrl}" placeholder="https://example.com/generate">
+                    <div class="mw-settings-hint">ComfyUI服务的generate接口地址</div>
+                </div>
+
+                <div class="mw-settings-group">
+                    <label class="mw-settings-label">API Key（可选）</label>
+                    <input type="text" class="mw-settings-input mw-api-key" value="${config.apiKey}" placeholder="如需认证请填写">
+                </div>
+
+                <div class="mw-settings-group">
+                    <label class="mw-settings-label">预置提示词</label>
+                    <div class="mw-prompts-list">${promptsHtml}</div>
+                    <button class="mw-add-prompt-btn">+ 添加自定义提示词</button>
+                </div>
+
+                <div class="mw-settings-footer">
+                    <button class="mw-save-btn">保存设置</button>
+                    <button class="mw-close-btn">关闭</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const apiUrlInput = overlay.querySelector('.mw-api-url');
+        const apiKeyInput = overlay.querySelector('.mw-api-key');
+        const addPromptBtn = overlay.querySelector('.mw-add-prompt-btn');
+        const saveBtn = overlay.querySelector('.mw-save-btn');
+        const closeBtn = overlay.querySelector('.mw-close-btn');
+        const promptsList = overlay.querySelector('.mw-prompts-list');
+
+        // 删除自定义提示词
+        promptsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('mw-prompt-delete')) {
+                const index = parseInt(e.target.dataset.index);
+                config.customPrompts.splice(index, 1);
+                state.config = config;
+                saveConfig(config);
+                overlay.remove();
+                showSettingsPanel();
+            }
+        });
+
+        // 添加自定义提示词
+        addPromptBtn.addEventListener('click', () => {
+            const name = prompt('提示词名称:');
+            if (!name) return;
+            const promptText = prompt('提示词内容:');
+            if (!promptText) return;
+
+            config.customPrompts.push({ name, prompt: promptText });
+            state.config = config;
+            saveConfig(config);
+            overlay.remove();
+            showSettingsPanel();
+        });
+
+        // 保存
+        saveBtn.addEventListener('click', () => {
+            config.apiUrl = apiUrlInput.value.trim();
+            config.apiKey = apiKeyInput.value.trim();
+            state.config = config;
+            saveConfig(config);
+            overlay.remove();
+            alert('设置已保存');
+        });
+
+        // 关闭
+        closeBtn.addEventListener('click', () => {
+            overlay.remove();
+        });
+
+        // 点击背景关闭
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+    }
+
+    // 注册油猴菜单
+    function registerMenu() {
+        GM_registerMenuCommand('⚙️ 打开设置', showSettingsPanel);
+        GM_registerMenuCommand(state.config.enabled ? '🔴 禁用脚本' : '🟢 启用脚本', () => {
+            state.config.enabled = !state.config.enabled;
+            saveConfig(state.config);
+            location.reload();
+        });
+    }
+
     // 脚本入口
-    console.log('[Magicwand] 脚本已加载');
+    console.log('[Magicwand] 脚本已加载，版本 1.0.0');
+
     injectStyles();
-    scanImages();
-    setupObserver();
+    registerMenu();
+
+    if (!state.config.enabled) {
+        console.log('[Magicwand] 脚本已禁用');
+        return;
+    }
+
+    if (!state.config.apiUrl) {
+        console.log('[Magicwand] 未配置API端点，请通过油猴菜单设置');
+    }
+
+    // 延迟扫描确保页面加载完成
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            scanImages();
+            setupObserver();
+        });
+    } else {
+        scanImages();
+        setupObserver();
+    }
+
+    console.log('[Magicwand] 初始化完成');
 
 })();
