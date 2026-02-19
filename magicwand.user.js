@@ -511,6 +511,317 @@
         });
     }
 
+    // 当前活动的面板
+    let activePanel = null;
+
+    // 创建编辑面板
+    function createEditPanel(img, btn) {
+        const panel = document.createElement('div');
+        panel.className = 'mw-panel';
+
+        const config = state.config;
+        const allPrompts = [...config.presetPrompts, ...config.customPrompts];
+
+        let html = `
+            <div class="mw-panel-title">AI 图片编辑</div>
+            <div class="mw-preset-grid">
+        `;
+
+        allPrompts.forEach((p, i) => {
+            html += `<button class="mw-preset-btn" data-prompt="${encodeURIComponent(p.prompt)}">${p.name}</button>`;
+        });
+        html += `<button class="mw-preset-btn" data-custom="true">自定义...</button></div>`;
+        html += `
+            <div class="mw-input-area">
+                <input type="text" class="mw-input" placeholder="输入编辑指令...">
+            </div>
+            <div class="mw-actions-row">
+                <button class="mw-action-btn mw-send-btn" disabled>发送</button>
+                <button class="mw-action-btn mw-cancel-btn">取消</button>
+            </div>
+        `;
+
+        panel.innerHTML = html;
+
+        const inputArea = panel.querySelector('.mw-input-area');
+        const input = panel.querySelector('.mw-input');
+        const sendBtn = panel.querySelector('.mw-send-btn');
+        const cancelBtn = panel.querySelector('.mw-cancel-btn');
+        const presetBtns = panel.querySelectorAll('.mw-preset-btn');
+
+        // 预置按钮点击
+        presetBtns.forEach(presetBtn => {
+            presetBtn.addEventListener('click', () => {
+                if (presetBtn.dataset.custom) {
+                    inputArea.classList.add('show');
+                    input.focus();
+                    sendBtn.disabled = false;
+                } else {
+                    const prompt = decodeURIComponent(presetBtn.dataset.prompt);
+                    sendEditRequest(img, prompt, panel, btn);
+                }
+            });
+        });
+
+        // 输入框事件
+        input.addEventListener('input', () => {
+            sendBtn.disabled = !input.value.trim();
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && input.value.trim()) {
+                sendEditRequest(img, input.value.trim(), panel, btn);
+            }
+        });
+
+        // 发送按钮
+        sendBtn.addEventListener('click', () => {
+            if (input.value.trim()) {
+                sendEditRequest(img, input.value.trim(), panel, btn);
+            }
+        });
+
+        // 取消按钮
+        cancelBtn.addEventListener('click', () => {
+            closePanel();
+        });
+
+        return panel;
+    }
+
+    // 显示编辑面板
+    function showEditPanel(img, btn) {
+        if (activePanel) {
+            activePanel.remove();
+        }
+
+        const panel = createEditPanel(img, btn);
+        const container = img.closest('.mw-container');
+
+        // 计算位置
+        const imgRect = img.getBoundingClientRect();
+        panel.style.position = 'fixed';
+        panel.style.top = `${imgRect.bottom + 10}px`;
+        panel.style.left = `${Math.max(10, Math.min(imgRect.left, window.innerWidth - 260))}px`;
+
+        document.body.appendChild(panel);
+        activePanel = panel;
+
+        // 点击外部关闭
+        setTimeout(() => {
+            document.addEventListener('click', handleOutsideClick);
+        }, 0);
+    }
+
+    // 处理外部点击
+    function handleOutsideClick(e) {
+        if (activePanel && !activePanel.contains(e.target) && !e.target.closest('.mw-edit-btn')) {
+            closePanel();
+        }
+    }
+
+    // 关闭面板
+    function closePanel() {
+        if (activePanel) {
+            activePanel.remove();
+            activePanel = null;
+        }
+        document.removeEventListener('click', handleOutsideClick);
+    }
+
+    // 显示加载状态
+    function showLoading(panel) {
+        panel.innerHTML = `
+            <div class="mw-loading">
+                <div class="mw-spinner"></div>
+                <span>正在编辑图片...</span>
+            </div>
+        `;
+    }
+
+    // 显示错误
+    function showError(panel, message) {
+        panel.innerHTML = `
+            <div class="mw-panel-title" style="color: #ef4444;">出错了</div>
+            <p style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">${message}</p>
+            <button class="mw-action-btn mw-cancel-btn" style="width: 100%;">关闭</button>
+        `;
+        panel.querySelector('.mw-cancel-btn').addEventListener('click', closePanel);
+    }
+
+    // 发送编辑请求
+    async function sendEditRequest(img, prompt, panel, btn) {
+        const config = state.config;
+
+        if (!config.apiUrl) {
+            showError(panel, '请先配置API端点地址');
+            return;
+        }
+
+        const imgSrc = img.getAttribute('data-original-src') || img.src;
+        const imgKey = imgSrc.substring(0, 100);
+
+        if (state.processingImages.has(imgKey)) {
+            return;
+        }
+        state.processingImages.add(imgKey);
+
+        showLoading(panel);
+
+        try {
+            const imageBlob = await fetchImage(imgSrc);
+            const newImageBlob = await callEditAPI(imageBlob, prompt, config);
+
+            const newImageUrl = URL.createObjectURL(newImageBlob);
+            const originalSrc = img.src;
+
+            closePanel();
+            showCompareView(img, originalSrc, newImageUrl, prompt, btn);
+
+        } catch (error) {
+            console.error('[Magicwand] 编辑失败:', error);
+            showError(panel, error.message || '编辑失败，请重试');
+        } finally {
+            state.processingImages.delete(imgKey);
+        }
+    }
+
+    // 获取图片Blob
+    async function fetchImage(url) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: url,
+                responseType: 'blob',
+                timeout: 30000,
+                onload: (response) => {
+                    if (response.status === 200) {
+                        resolve(response.response);
+                    } else {
+                        reject(new Error(`获取图片失败: ${response.status}`));
+                    }
+                },
+                onerror: () => reject(new Error('网络请求失败')),
+                ontimeout: () => reject(new Error('请求超时'))
+            });
+        });
+    }
+
+    // 调用编辑API
+    async function callEditAPI(imageBlob, prompt, config) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('ImageInput', imageBlob, 'image.png');
+            formData.append('prompt', prompt);
+
+            const headers = {};
+            if (config.apiKey) {
+                headers['Authorization'] = `Bearer ${config.apiKey}`;
+            }
+
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: config.apiUrl,
+                data: formData,
+                headers: headers,
+                responseType: 'blob',
+                timeout: 60000,
+                onload: (response) => {
+                    if (response.status === 200) {
+                        resolve(response.response);
+                    } else {
+                        try {
+                            const error = JSON.parse(response.responseText);
+                            reject(new Error(error.error || error.detail || '服务器错误'));
+                        } catch {
+                            reject(new Error(`服务器错误: ${response.status}`));
+                        }
+                    }
+                },
+                onerror: () => reject(new Error('网络请求失败')),
+                ontimeout: () => reject(new Error('请求超时，图片可能较大'))
+            });
+        });
+    }
+
+    // 显示对比视图
+    function showCompareView(originalImg, originalSrc, newSrc, prompt, editBtn) {
+        const container = originalImg.closest('.mw-container');
+        if (!container) return;
+
+        originalImg.style.display = 'none';
+        editBtn.style.display = 'none';
+
+        const compareContainer = document.createElement('div');
+        compareContainer.className = 'mw-compare-container';
+
+        const rect = originalImg.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(originalImg);
+
+        compareContainer.style.width = originalImg.width + 'px';
+        compareContainer.style.height = originalImg.height + 'px';
+
+        compareContainer.innerHTML = `
+            <img class="mw-new-image" src="${newSrc}" style="width: ${originalImg.width}px; height: ${originalImg.height}px; object-fit: ${computedStyle.objectFit || 'fill'};">
+            <img class="mw-old-image" src="${originalSrc}" style="object-fit: ${computedStyle.objectFit || 'fill'};">
+            <div class="mw-slider-line"></div>
+            <div class="mw-slider-handle">${ARROW_SVG}</div>
+            <div class="mw-compare-actions">
+                <button class="mw-compare-action-btn mw-restore-btn">恢复原图</button>
+                <button class="mw-compare-action-btn mw-reedit-btn">重新编辑</button>
+            </div>
+        `;
+
+        container.appendChild(compareContainer);
+
+        const oldImage = compareContainer.querySelector('.mw-old-image');
+        const sliderLine = compareContainer.querySelector('.mw-slider-line');
+        const sliderHandle = compareContainer.querySelector('.mw-slider-handle');
+        const restoreBtn = compareContainer.querySelector('.mw-restore-btn');
+        const reeditBtn = compareContainer.querySelector('.mw-reedit-btn');
+
+        // 滑块交互
+        function updateSlider(x) {
+            const rect = compareContainer.getBoundingClientRect();
+            let percent = ((x - rect.left) / rect.width) * 100;
+            percent = Math.max(0, Math.min(100, percent));
+
+            oldImage.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
+            sliderLine.style.left = `${percent}%`;
+            sliderHandle.style.left = `${percent}%`;
+        }
+
+        compareContainer.addEventListener('mousemove', (e) => {
+            updateSlider(e.clientX);
+        });
+
+        compareContainer.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1) {
+                updateSlider(e.touches[0].clientX);
+            }
+        });
+
+        // 恢复原图
+        restoreBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            compareContainer.remove();
+            originalImg.style.display = '';
+            editBtn.style.display = '';
+            originalImg.removeAttribute('data-original-src');
+        });
+
+        // 重新编辑
+        reeditBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            compareContainer.remove();
+            originalImg.style.display = '';
+            editBtn.style.display = '';
+            showEditPanel(originalImg, editBtn);
+        });
+
+        // 保存原始src以便后续恢复
+        originalImg.setAttribute('data-original-src', originalSrc);
+    }
+
     // 脚本入口
     console.log('[Magicwand] 脚本已加载');
     injectStyles();
