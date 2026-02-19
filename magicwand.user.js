@@ -432,6 +432,39 @@
                 position: relative;
                 display: inline-block;
             }
+
+            /* 处理中状态 */
+            .mw-processing-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(99, 102, 241, 0.3);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 9998;
+                border-radius: 4px;
+            }
+            .mw-processing-overlay::before {
+                content: '';
+                width: 40px;
+                height: 40px;
+                border: 3px solid rgba(255, 255, 255, 0.3);
+                border-top-color: white;
+                border-radius: 50%;
+                animation: mw-spin 0.8s linear infinite;
+            }
+            .mw-processing-text {
+                color: white;
+                font-size: 13px;
+                font-weight: 500;
+                margin-top: 10px;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }
         `);
     }
 
@@ -648,6 +681,22 @@
         panel.querySelector('.mw-cancel-btn').addEventListener('click', closePanel);
     }
 
+    // 显示处理中遮罩
+    function showProcessingOverlay(container, prompt) {
+        const overlay = document.createElement('div');
+        overlay.className = 'mw-processing-overlay';
+        overlay.innerHTML = `<span class="mw-processing-text">${prompt.substring(0, 20)}${prompt.length > 20 ? '...' : ''}</span>`;
+        container.appendChild(overlay);
+        return overlay;
+    }
+
+    // 移除处理中遮罩
+    function hideProcessingOverlay(overlay) {
+        if (overlay && overlay.parentNode) {
+            overlay.remove();
+        }
+    }
+
     // 发送编辑请求
     async function sendEditRequest(img, prompt, panel, btn) {
         const config = state.config;
@@ -666,6 +715,8 @@
         state.processingImages.add(imgKey);
 
         showLoading(panel);
+        const container = img.closest('.mw-container');
+        const processingOverlay = container ? showProcessingOverlay(container, prompt) : null;
 
         try {
             const imageBlob = await fetchImage(imgSrc);
@@ -682,6 +733,7 @@
             showError(panel, error.message || '编辑失败，请重试');
         } finally {
             state.processingImages.delete(imgKey);
+            hideProcessingOverlay(processingOverlay);
         }
     }
 
