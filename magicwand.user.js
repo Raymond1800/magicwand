@@ -435,8 +435,86 @@
         `);
     }
 
+    // 魔法棒SVG图标
+    const MAGIC_WAND_SVG = `<svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M7.5 5.6L10 7 8.6 4.5 10 2 7.5 3.4 5 2l1.4 2.5L5 7zm12 9.8L17 14l1.4 2.5L17 19l2.5-1.4L22 19l-1.4-2.5L22 14zM22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29a.84.84 0 0 0-1.19 0L3.29 17.17a.84.84 0 0 0 0 1.19l2.35 2.35a.84.84 0 0 0 1.19 0l9.89-9.89a.84.84 0 0 0 0-1.19l-2.35-2.34z"/>
+    </svg>`;
+
+    const ARROW_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 8L22 12L18 16"/>
+        <path d="M6 8L2 12L6 16"/>
+    </svg>`;
+
+    // 创建编辑按钮
+    function createEditButton(img) {
+        const btn = document.createElement('div');
+        btn.className = 'mw-edit-btn';
+        btn.innerHTML = MAGIC_WAND_SVG;
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showEditPanel(img, btn);
+        });
+        return btn;
+    }
+
+    // 检查图片是否可处理
+    function isProcessableImage(img) {
+        if (img.width < 100 || img.height < 100) return false;
+        if (img.hasAttribute('data-magicwand-processed')) return false;
+        if (!img.src || img.src.startsWith('data:image/svg')) return false;
+        const rect = img.getBoundingClientRect();
+        if (rect.width < 100 || rect.height < 100) return false;
+        return true;
+    }
+
+    // 处理单个图片
+    function processImage(img) {
+        if (!isProcessableImage(img)) return;
+        if (img.closest('.mw-compare-container')) return;
+        if (img.closest('.mw-container')) return;
+
+        img.setAttribute('data-magicwand-processed', 'true');
+
+        const container = document.createElement('div');
+        container.className = 'mw-container';
+        img.parentNode.insertBefore(container, img);
+        container.appendChild(img);
+
+        const btn = createEditButton(img);
+        container.appendChild(btn);
+    }
+
+    // 扫描页面所有图片
+    function scanImages() {
+        const images = document.querySelectorAll('img');
+        images.forEach(processImage);
+    }
+
+    // 设置MutationObserver监听新图片
+    function setupObserver() {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.tagName === 'IMG') {
+                        processImage(node);
+                    } else if (node.querySelectorAll) {
+                        node.querySelectorAll('img').forEach(processImage);
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
     // 脚本入口
     console.log('[Magicwand] 脚本已加载');
     injectStyles();
+    scanImages();
+    setupObserver();
 
 })();
