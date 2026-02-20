@@ -243,13 +243,18 @@
                 position: relative;
                 display: inline-block;
                 cursor: ew-resize;
+                overflow: hidden;
             }
             .mw-compare-container img {
                 display: block;
                 max-width: none;
             }
             .mw-new-image {
-                position: relative;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
             }
             .mw-old-image {
                 position: absolute;
@@ -257,7 +262,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                object-fit: cover;
+                object-fit: inherit;
                 clip-path: inset(0 50% 0 0);
             }
             .mw-slider-line {
@@ -859,21 +864,24 @@
         const container = originalImg.closest('.mw-container');
         if (!container) return;
 
+        const rect = originalImg.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(originalImg);
+        const displayWidth = Math.max(1, Math.round(rect.width));
+        const displayHeight = Math.max(1, Math.round(rect.height));
+        const objectFit = computedStyle.objectFit || 'fill';
+        const objectPosition = computedStyle.objectPosition || '50% 50%';
+
         originalImg.style.display = 'none';
         editBtn.style.display = 'none';
 
         const compareContainer = document.createElement('div');
         compareContainer.className = 'mw-compare-container';
-
-        const rect = originalImg.getBoundingClientRect();
-        const computedStyle = window.getComputedStyle(originalImg);
-
-        compareContainer.style.width = originalImg.width + 'px';
-        compareContainer.style.height = originalImg.height + 'px';
+        compareContainer.style.width = displayWidth + 'px';
+        compareContainer.style.height = displayHeight + 'px';
 
         compareContainer.innerHTML = `
-            <img class="mw-new-image" src="${newSrc}" style="width: ${originalImg.width}px; height: ${originalImg.height}px; object-fit: ${computedStyle.objectFit || 'fill'};">
-            <img class="mw-old-image" src="${originalSrc}" style="object-fit: ${computedStyle.objectFit || 'fill'};">
+            <img class="mw-new-image" src="${newSrc}" style="object-fit: ${objectFit}; object-position: ${objectPosition};">
+            <img class="mw-old-image" src="${originalSrc}" style="object-fit: ${objectFit}; object-position: ${objectPosition};">
             <div class="mw-slider-line"></div>
             <div class="mw-slider-handle">${ARROW_SVG}</div>
             <div class="mw-compare-actions">
