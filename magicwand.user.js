@@ -55,6 +55,13 @@
         processingImages: new Set()
     };
 
+    function markHostContext() {
+        const host = window.location.hostname || '';
+        if (host.includes('pinterest.com')) {
+            document.documentElement.classList.add('mw-host-pinterest');
+        }
+    }
+
     // 注入样式
     function injectStyles() {
         GM_addStyle(`
@@ -86,6 +93,12 @@
                 fill: white;
             }
             .mw-container:hover .mw-edit-btn {
+                opacity: 0.7;
+            }
+            .mw-host-pinterest .mw-edit-btn {
+                left: 8px;
+                right: auto;
+                bottom: 8px;
                 opacity: 0.7;
             }
 
@@ -509,8 +522,29 @@
 
         img.setAttribute('data-magicwand-processed', 'true');
 
+        const imgStyle = window.getComputedStyle(img);
+        const isAbsolute = imgStyle.position === 'absolute';
+
         const container = document.createElement('div');
         container.className = 'mw-container';
+        
+        if (isAbsolute) {
+            container.style.cssText = `
+                position: absolute;
+                top: ${imgStyle.top};
+                left: ${imgStyle.left};
+                right: ${imgStyle.right};
+                bottom: ${imgStyle.bottom};
+                width: ${img.offsetWidth}px;
+                height: ${img.offsetHeight}px;
+            `;
+            img.style.position = 'relative';
+            img.style.top = 'auto';
+            img.style.left = 'auto';
+            img.style.right = 'auto';
+            img.style.bottom = 'auto';
+        }
+
         img.parentNode.insertBefore(container, img);
         container.appendChild(img);
 
@@ -996,6 +1030,7 @@
     // 脚本入口
     console.log('[Magicwand] 脚本已加载，版本 1.0.0');
 
+    markHostContext();
     injectStyles();
     registerMenu();
 
