@@ -24,29 +24,54 @@
         apiKey: '',
         enabled: true,
         presetPrompts: [
-            { name: '人物动作编辑', prompt: '修改人物动作姿势' },
-            { name: '人物穿着编辑', prompt: '修改人物服装穿着' },
-            { name: '背景替换', prompt: '替换图片背景' }
+            { name: '全', prompt: 'Remove all clothing from the person, keeping the pose and background intact with natural skin tones and realistic lighting.' },
+            { name: '上身', prompt: 'Remove the upper body clothing from the person, leaving the lower body as is, with smooth skin transitions and consistent shadows.' },
+            { name: '居家', prompt: "Replace the person's clothing with casual home lingerie, such as a comfortable bra and panties set in soft pastel colors, fitting the body naturally." },
+            { name: '动漫', prompt: 'Restyle the picture as a graphic novel illustration, with high contrast panels, speech bubble potential, and stylized proportions.' }
         ],
         customPrompts: []
     };
+
+    function getDefaultPresetPrompts() {
+        return DEFAULT_CONFIG.presetPrompts.map((item) => ({ ...item }));
+    }
+
+    function buildDefaultConfig() {
+        return {
+            ...DEFAULT_CONFIG,
+            presetPrompts: getDefaultPresetPrompts(),
+            customPrompts: []
+        };
+    }
 
     // 获取配置
     function getConfig() {
         const saved = GM_getValue('magicwand_config', null);
         if (saved) {
             try {
-                return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+                const savedConfig = JSON.parse(saved);
+                const config = { ...buildDefaultConfig(), ...savedConfig };
+                config.presetPrompts = getDefaultPresetPrompts();
+                if (!Array.isArray(config.customPrompts)) {
+                    config.customPrompts = [];
+                }
+                return config;
             } catch (e) {
-                return DEFAULT_CONFIG;
+                return buildDefaultConfig();
             }
         }
-        return DEFAULT_CONFIG;
+        return buildDefaultConfig();
     }
 
     // 保存配置
     function saveConfig(config) {
-        GM_setValue('magicwand_config', JSON.stringify(config));
+        const configToSave = {
+            apiUrl: typeof config.apiUrl === 'string' ? config.apiUrl : '',
+            apiKey: typeof config.apiKey === 'string' ? config.apiKey : '',
+            enabled: typeof config.enabled === 'boolean' ? config.enabled : true,
+            customPrompts: Array.isArray(config.customPrompts) ? config.customPrompts : []
+        };
+        GM_setValue('magicwand_config', JSON.stringify(configToSave));
     }
 
     // 全局状态
