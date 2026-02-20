@@ -692,15 +692,38 @@
         }
 
         const panel = createEditPanel(img, btn);
-        const container = img.closest('.mw-container');
-
-        // 计算位置
         const imgRect = img.getBoundingClientRect();
         panel.style.position = 'fixed';
-        panel.style.top = `${imgRect.bottom + 10}px`;
-        panel.style.left = `${Math.max(10, Math.min(imgRect.left, window.innerWidth - 260))}px`;
+        panel.style.visibility = 'hidden';
+        panel.style.top = '0px';
+        panel.style.left = '0px';
 
         document.body.appendChild(panel);
+
+        const panelRect = panel.getBoundingClientRect();
+        const panelWidth = panelRect.width;
+        const panelHeight = panelRect.height;
+        const margin = 10;
+
+        const maxLeft = Math.max(margin, window.innerWidth - panelWidth - margin);
+        const left = Math.max(margin, Math.min(imgRect.left, maxLeft));
+
+        const belowTop = imgRect.bottom + margin;
+        const aboveTop = imgRect.top - panelHeight - margin;
+        const canShowBelow = belowTop + panelHeight <= window.innerHeight - margin;
+        const canShowAbove = aboveTop >= margin;
+
+        let top;
+        if (!canShowBelow && canShowAbove) {
+            top = aboveTop;
+        } else {
+            const maxTop = Math.max(margin, window.innerHeight - panelHeight - margin);
+            top = Math.max(margin, Math.min(belowTop, maxTop));
+        }
+
+        panel.style.left = `${left}px`;
+        panel.style.top = `${top}px`;
+        panel.style.visibility = 'visible';
         activePanel = panel;
 
         // 点击外部关闭
