@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magicwand - 魔法图片编辑
 // @namespace    https://magicwand.ai/
-// @version      1.0.0
+// @version      1.0.1
 // @description  AI图片编辑油猴脚本，支持预置提示词和自定义编辑
 // @author       Magicwand
 // @match        *://*/*
@@ -1061,7 +1061,7 @@
     }
 
     // 脚本入口
-    console.log('[Magicwand] 脚本已加载，版本 1.0.0');
+    console.log('[Magicwand] 脚本已加载，版本 1.0.1');
 
     markHostContext();
     injectStyles();
