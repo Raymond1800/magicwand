@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magicwand - 魔法图片编辑
 // @namespace    https://magicwand.ai/
-// @version      1.0.8
+// @version      1.0.10
 // @description  AI图片编辑油猴脚本，支持预置提示词和自定义编辑
 // @author       Magicwand
 // @match        *://*/*
@@ -232,16 +232,6 @@
                 background: #f59e0b;
                 color: white;
                 border-color: #d97706;
-            }
-            .mw-number-grid.row2 .mw-number-btn {
-                background: #dbeafe;
-                border-color: #93c5fd;
-                color: #1e40af;
-            }
-            .mw-number-grid.row2 .mw-number-btn:hover {
-                background: #3b82f6;
-                color: white;
-                border-color: #2563eb;
             }
             .mw-input-area {
                 display: none;
@@ -952,22 +942,15 @@
 
         let numberGrid1Html = '<div class="mw-number-grid">';
         for (let i = 0; i < 9; i++) {
-            const p = config.row1Prompts[i] || { prompt: '' };
-            numberGrid1Html += `<button class="mw-number-btn" data-row="1" data-index="${i}" data-prompt="${encodeURIComponent(p.prompt)}">${i + 1}</button>`;
+            const row1 = config.row1Prompts[i] || { prompt: '' };
+            const row2 = config.row2Prompts[i] || { prompt: '' };
+            numberGrid1Html += `<button class="mw-number-btn" data-index="${i}" data-prompt1="${encodeURIComponent(row1.prompt)}" data-prompt2="${encodeURIComponent(row2.prompt)}">${i + 1}</button>`;
         }
         numberGrid1Html += '</div>';
-
-        let numberGrid2Html = '<div class="mw-number-grid row2">';
-        for (let i = 0; i < 9; i++) {
-            const p = config.row2Prompts[i] || { prompt: '' };
-            numberGrid2Html += `<button class="mw-number-btn" data-row="2" data-index="${i}" data-prompt="${encodeURIComponent(p.prompt)}">${i + 1}</button>`;
-        }
-        numberGrid2Html += '</div>';
 
         let html = `
             <div class="mw-panel-title">AI 图片编辑</div>
             ${numberGrid1Html}
-            ${numberGrid2Html}
             <div class="mw-preset-grid">
         `;
 
@@ -996,9 +979,12 @@
 
         numberBtns.forEach(numBtn => {
             numBtn.addEventListener('click', () => {
-                const prompt = decodeURIComponent(numBtn.dataset.prompt);
-                if (prompt) {
-                    sendEditRequest(img, prompt, panel, btn);
+                const prompt1 = decodeURIComponent(numBtn.dataset.prompt1 || '');
+                const prompt2 = decodeURIComponent(numBtn.dataset.prompt2 || '');
+                if (prompt1 && prompt2) {
+                    sendDualEditRequest(img, prompt1, prompt2, panel, btn);
+                } else {
+                    showError(panel, '该编号提示词未配置完整');
                 }
             });
         });
@@ -1040,6 +1026,53 @@
         });
 
         return panel;
+    }
+
+    // 发送双提示词编辑请求（并发生成两张图）
+    async function sendDualEditRequest(img, prompt1, prompt2, panel, btn) {
+        const config = state.config;
+
+        if (!config.apiUrl) {
+            showError(panel, '请先配置API端点地址');
+            return;
+        }
+
+        const imgSrc = getBestImageSrc(img);
+        if (!imgSrc) {
+            showError(panel, '无法获取图片地址');
+            return;
+        }
+        const imgKey = imgSrc.substring(0, 100);
+
+        if (state.processingImages.has(imgKey)) {
+            return;
+        }
+        state.processingImages.add(imgKey);
+
+        showLoading(panel);
+        const container = img.closest('.mw-container');
+        const processingOverlay = container ? showProcessingOverlay(container, '双图生成中...') : null;
+
+        try {
+            const imageBlob = await fetchImage(imgSrc);
+            const [newImageBlob1, newImageBlob2] = await Promise.all([
+                callEditAPI(imageBlob, prompt1, config),
+                callEditAPI(imageBlob, prompt2, config)
+            ]);
+
+            const newImageUrl1 = URL.createObjectURL(newImageBlob1);
+            const newImageUrl2 = URL.createObjectURL(newImageBlob2);
+            const originalSrc = img.src;
+
+            closePanel();
+            showCompareView(img, originalSrc, newImageUrl1, newImageUrl2, '双图对比', btn);
+        } catch (error) {
+            console.error('[Magicwand] 双图编辑失败:', error);
+            showError(panel, error.message || '双图编辑失败，请重试');
+        } finally {
+            state.processingImages.delete(imgKey);
+            hideProcessingOverlay(processingOverlay);
+        }
     }
 
     // 显示编辑面板
@@ -1174,7 +1207,7 @@
             const originalSrc = img.src;
 
             closePanel();
-            showCompareView(img, originalSrc, newImageUrl, prompt, btn);
+            showCompareView(img, originalSrc, newImageUrl, originalSrc, prompt, btn);
 
         } catch (error) {
             console.error('[Magicwand] 编辑失败:', error);
@@ -1256,7 +1289,7 @@
     }
 
     // 显示对比视图
-    function showCompareView(originalImg, originalSrc, newSrc, prompt, editBtn) {
+    function showCompareView(originalImg, originalSrc, newSrc, oldSrc, prompt, editBtn) {
         const container = originalImg.closest('.mw-container');
         if (!container) return;
         const isFloatingBtn = !!(editBtn && editBtn.classList && editBtn.classList.contains('mw-floating-btn'));
@@ -1282,7 +1315,7 @@
 
         compareContainer.innerHTML = `
             <img class="mw-new-image" src="${newSrc}" style="object-fit: ${objectFit}; object-position: ${objectPosition};">
-            <img class="mw-old-image" src="${originalSrc}" style="object-fit: ${objectFit}; object-position: ${objectPosition};">
+            <img class="mw-old-image" src="${oldSrc}" style="object-fit: ${objectFit}; object-position: ${objectPosition};">
             <div class="mw-slider-line"></div>
             <div class="mw-slider-handle">${ARROW_SVG}</div>
             <div class="mw-compare-actions">
