@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magicwand - 魔法图片编辑
 // @namespace    https://magicwand.ai/
-// @version      1.0.3
+// @version      1.0.4
 // @description  AI图片编辑油猴脚本，支持预置提示词和自定义编辑
 // @author       Magicwand
 // @match        *://*/*
@@ -1257,6 +1257,7 @@
     function showCompareView(originalImg, originalSrc, newSrc, prompt, editBtn) {
         const container = originalImg.closest('.mw-container');
         if (!container) return;
+        const isFloatingBtn = !!(editBtn && editBtn.classList && editBtn.classList.contains('mw-floating-btn'));
 
         const rect = originalImg.getBoundingClientRect();
         const computedStyle = window.getComputedStyle(originalImg);
@@ -1266,7 +1267,11 @@
         const objectPosition = computedStyle.objectPosition || '50% 50%';
 
         originalImg.style.display = 'none';
-        editBtn.style.display = 'none';
+        if (!isFloatingBtn && editBtn) {
+            editBtn.style.display = 'none';
+        } else {
+            hidePinterestFloatButton(true);
+        }
 
         const compareContainer = document.createElement('div');
         compareContainer.className = 'mw-compare-container';
@@ -1318,7 +1323,9 @@
             e.stopPropagation();
             compareContainer.remove();
             originalImg.style.display = '';
-            editBtn.style.display = '';
+            if (!isFloatingBtn && editBtn) {
+                editBtn.style.display = '';
+            }
             originalImg.removeAttribute('data-original-src');
         });
 
@@ -1327,7 +1334,9 @@
             e.stopPropagation();
             compareContainer.remove();
             originalImg.style.display = '';
-            editBtn.style.display = '';
+            if (!isFloatingBtn && editBtn) {
+                editBtn.style.display = '';
+            }
             showEditPanel(originalImg, editBtn);
         });
 
@@ -1455,7 +1464,7 @@
     }
 
     // 脚本入口
-    console.log('[Magicwand] 脚本已加载，版本 1.0.3');
+    console.log('[Magicwand] 脚本已加载，版本 1.0.4');
 
     markHostContext();
     injectStyles();
