@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magicwand - 魔法图片编辑
 // @namespace    https://magicwand.ai/
-// @version      1.0.2
+// @version      1.0.3
 // @description  AI图片编辑油猴脚本，支持预置提示词和自定义编辑
 // @author       Magicwand
 // @match        *://*/*
@@ -37,7 +37,7 @@
             { prompt: 'Modify the subject to be fully nude in a direct frontal view, standing with a powerful and alluring stance facing the camera. Ensure their face, hair, and unique identity are not altered in any way. The background must remain exactly as it is. Angle: Eye-level, head-on shot, creating a direct and engaging connection.' },
             { prompt: 'Depict the person from a high camera angle, looking down as they kneel on a soft surface, completely bare, and looking up seductively towards the camera. It is absolutely essential to keep the facial identity identical to the original. Do not modify the rest of the scene. Angle: High-angle view, creating a dynamic of looking down upon the subject.' },
             { prompt: 'Change the subject to be completely undressed, sitting on the edge of a high chair or table, captured from a very low angle. Their legs should be the focus of the composition. Preserve the person\'s face and hair perfectly. The environment must not be changed. Angle: Very low angle, accentuating the length of the body and creating a provocative mood.' },
-            { prompt: 'Modify the person to be entirely nude, lying on their stomach on a bed, propped up on their elbows and looking back over their shoulder at the camera. This should be a full-body shot. It is critical to keep the facial identity and all background elements perfectly preserved. Pose: A classic alluring pose that highlights the back and creates a twist in the torso.' },
+            { prompt: 'Redraw the subject to be completely nude, positioned in a prone pose (on their stomach or hands and knees) with their buttocks raised and aimed directly at the camera. They should be looking back over their shoulder, making seductive eye contact with the viewer. The camera\'s focus must be sharply locked on their hips and buttocks, making this the clearest and most detailed area of the image. It is absolutely critical to preserve the person\'s face, hair, and identity without any changes. The background and lighting must also remain identical.' },
             { prompt: 'Re-imagine the person in a three-quarters view, completely nude and leaning forward against a wall or railing. Their body is angled to the camera to create depth and show form. Do not alter the subject\'s face or unique features. The background must stay the same. Angle: A dynamic angle between front and side, often considered most flattering for form.' },
             { prompt: 'Using a slight dutch angle to make the scene feel more dynamic, redraw the character nude and in a standing contrapposto pose, with their weight shifted to one foot. The camera tilt should add a sense of unease or excitement. The facial features, expression, and all background elements must be perfectly preserved. Angle: Tilted camera, adding an artistic and dynamic feel to a classic pose.' }
         ],
@@ -48,7 +48,7 @@
             { prompt: 'Modify the subject in a direct frontal view, standing with a powerful and alluring stance facing the camera. Ensure their face, hair, and unique identity are not altered in any way. The background must remain exactly as it is. Angle: Eye-level, head-on shot, creating a direct and engaging connection.' },
             { prompt: 'Depict the person from a high camera angle, looking down as they kneel on a soft surface, and looking up seductively towards the camera. It is absolutely essential to keep the facial identity identical to the original. Do not modify the rest of the scene. Angle: High-angle view, creating a dynamic of looking down upon the subject.' },
             { prompt: 'Change the subject to be sitting on the edge of a high chair or table, captured from a very low angle. Their legs should be the focus of the composition. Preserve the person\'s face and hair perfectly. The environment must not be changed. Angle: Very low angle, accentuating the length of the body and creating a provocative mood.' },
-            { prompt: 'Modify the person lying on their stomach on a bed, propped up on their elbows and looking back over their shoulder at the camera. This should be a full-body shot. It is critical to keep the facial identity and all background elements perfectly preserved. Pose: A classic alluring pose that highlights the back and creates a twist in the torso.' },
+            { prompt: 'Redraw the subject positioned in a prone pose (on their stomach or hands and knees) with their buttocks raised and aimed directly at the camera. They should be looking back over their shoulder, making seductive eye contact with the viewer. The camera\'s focus must be sharply locked on their hips and buttocks, making this the clearest and most detailed area of the image. It is absolutely critical to preserve the person\'s face, hair, and identity without any changes. The background and lighting must also remain identical.' },
             { prompt: 'Re-imagine the person in a three-quarters view, leaning forward against a wall or railing. Their body is angled to the camera to create depth and show form. Do not alter the subject\'s face or unique features. The background must stay the same. Angle: A dynamic angle between front and side, often considered most flattering for form.' },
             { prompt: 'Using a slight dutch angle to make the scene feel more dynamic, redraw the character in a standing contrapposto pose, with their weight shifted to one foot. The camera tilt should add a sense of unease or excitement. The facial features, expression, and all background elements must be perfectly preserved. Angle: Tilted camera, adding an artistic and dynamic feel to a classic pose.' }
         ]
@@ -1165,7 +1165,7 @@
     }
 
     // 脚本入口
-    console.log('[Magicwand] 脚本已加载，版本 1.0.2');
+    console.log('[Magicwand] 脚本已加载，版本 1.0.3');
 
     markHostContext();
     injectStyles();
