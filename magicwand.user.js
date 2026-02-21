@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magicwand - 魔法图片编辑
 // @namespace    https://magicwand.ai/
-// @version      1.0.1
+// @version      1.0.2
 // @description  AI图片编辑油猴脚本，支持预置提示词和自定义编辑
 // @author       Magicwand
 // @match        *://*/*
@@ -29,7 +29,29 @@
             { name: '碎', prompt: "A young woman in her original outfit precisely torn open with deliberate ragged gashes and long vertical rips across the chest, abdomen, sleeves and skirt, fabric edges frayed and curled outward exposing an underlying layer of contrasting inner clothing beneath each tear, original garment style, cut, color and fit remain perfectly preserved except for the controlled ripping, cinematic realism style, soft studio softbox lighting with gentle high-contrast rim light defining the torn edges and layered fabric, keep original facial features, exact body proportions, precise pose, expression, hair, skin tone, and entire background composition completely unchanged and intact." },
             { name: '透', prompt: "her original outer clothing completely transmuted into ultra-sheer black translucent chiffon, gossamer-fine black gauze with extreme diaphanous transparency, near-zero opacity allowing vivid visibility of every contour, intricate lace motif, delicate strap placement, subtle embroidery and exact tonal variations of the underlying intimate lingerie pressing softly against skin, fabric displaying pronounced refractive moiré shimmer and faint shadow casting through multiple sheer layers, paired with glossy jet-black thigh-high stockings hugging legs to mid-thigh with ornate black lace garter tops, cinematic realism style, precise studio softbox illumination merged with strong high-contrast rim lighting that sharply delineates every translucent fold, layered transparency gradients and stocking silk sheen against warm skin tones, keep original facial features, precise body proportions, exact pose, expression, hair, skin texture, and entire background composition completely unchanged and perfectly intact." }
         ],
-        customPrompts: []
+        customPrompts: [],
+        row1Prompts: [
+            { prompt: 'Redraw the subject as completely nude, lying on their back as seen from a high angle looking directly down. Their pose should be open and inviting. Critically, maintain the original face, hair, and identity without any change. The surrounding environment must stay identical. Angle: Top-down view, emphasizing the form on a flat plane.' },
+            { prompt: 'From a dramatic low angle looking up, change the person to be entirely naked, standing tall and confidently. This perspective should make them look powerful. It is essential to preserve their exact facial features and expression. Do not alter the background or lighting. Angle: Worm\'s-eye view, creating a sense of dominance and height.' },
+            { prompt: 'Re-render the subject in a side profile view, completely nude and kneeling gracefully on the floor. Their body should be turned exactly 90 degrees from the camera to highlight their silhouette. The character\'s face and identity must be perfectly preserved. Keep all other parts of the image unchanged. Angle: Strict side view, focusing on the outline and curves of the body.' },
+            { prompt: 'Modify the subject to be fully nude in a direct frontal view, standing with a powerful and alluring stance facing the camera. Ensure their face, hair, and unique identity are not altered in any way. The background must remain exactly as it is. Angle: Eye-level, head-on shot, creating a direct and engaging connection.' },
+            { prompt: 'Depict the person from a high camera angle, looking down as they kneel on a soft surface, completely bare, and looking up seductively towards the camera. It is absolutely essential to keep the facial identity identical to the original. Do not modify the rest of the scene. Angle: High-angle view, creating a dynamic of looking down upon the subject.' },
+            { prompt: 'Change the subject to be completely undressed, sitting on the edge of a high chair or table, captured from a very low angle. Their legs should be the focus of the composition. Preserve the person\'s face and hair perfectly. The environment must not be changed. Angle: Very low angle, accentuating the length of the body and creating a provocative mood.' },
+            { prompt: 'Modify the person to be entirely nude, lying on their stomach on a bed, propped up on their elbows and looking back over their shoulder at the camera. This should be a full-body shot. It is critical to keep the facial identity and all background elements perfectly preserved. Pose: A classic alluring pose that highlights the back and creates a twist in the torso.' },
+            { prompt: 'Re-imagine the person in a three-quarters view, completely nude and leaning forward against a wall or railing. Their body is angled to the camera to create depth and show form. Do not alter the subject\'s face or unique features. The background must stay the same. Angle: A dynamic angle between front and side, often considered most flattering for form.' },
+            { prompt: 'Using a slight dutch angle to make the scene feel more dynamic, redraw the character nude and in a standing contrapposto pose, with their weight shifted to one foot. The camera tilt should add a sense of unease or excitement. The facial features, expression, and all background elements must be perfectly preserved. Angle: Tilted camera, adding an artistic and dynamic feel to a classic pose.' }
+        ],
+        row2Prompts: [
+            { prompt: 'Redraw the subject lying on their back as seen from a high angle looking directly down. Their pose should be open and inviting. Critically, maintain the original face, hair, and identity without any change. The surrounding environment must stay identical. Angle: Top-down view, emphasizing the form on a flat plane.' },
+            { prompt: 'From a dramatic low angle looking up, change the person to be standing tall and confidently. This perspective should make them look powerful. It is essential to preserve their exact facial features and expression. Do not alter the background or lighting. Angle: Worm\'s-eye view, creating a sense of dominance and height.' },
+            { prompt: 'Re-render the subject in a side profile view, kneeling gracefully on the floor. Their body should be turned exactly 90 degrees from the camera to highlight their silhouette. The character\'s face and identity must be perfectly preserved. Keep all other parts of the image unchanged. Angle: Strict side view, focusing on the outline and curves of the body.' },
+            { prompt: 'Modify the subject in a direct frontal view, standing with a powerful and alluring stance facing the camera. Ensure their face, hair, and unique identity are not altered in any way. The background must remain exactly as it is. Angle: Eye-level, head-on shot, creating a direct and engaging connection.' },
+            { prompt: 'Depict the person from a high camera angle, looking down as they kneel on a soft surface, and looking up seductively towards the camera. It is absolutely essential to keep the facial identity identical to the original. Do not modify the rest of the scene. Angle: High-angle view, creating a dynamic of looking down upon the subject.' },
+            { prompt: 'Change the subject to be sitting on the edge of a high chair or table, captured from a very low angle. Their legs should be the focus of the composition. Preserve the person\'s face and hair perfectly. The environment must not be changed. Angle: Very low angle, accentuating the length of the body and creating a provocative mood.' },
+            { prompt: 'Modify the person lying on their stomach on a bed, propped up on their elbows and looking back over their shoulder at the camera. This should be a full-body shot. It is critical to keep the facial identity and all background elements perfectly preserved. Pose: A classic alluring pose that highlights the back and creates a twist in the torso.' },
+            { prompt: 'Re-imagine the person in a three-quarters view, leaning forward against a wall or railing. Their body is angled to the camera to create depth and show form. Do not alter the subject\'s face or unique features. The background must stay the same. Angle: A dynamic angle between front and side, often considered most flattering for form.' },
+            { prompt: 'Using a slight dutch angle to make the scene feel more dynamic, redraw the character in a standing contrapposto pose, with their weight shifted to one foot. The camera tilt should add a sense of unease or excitement. The facial features, expression, and all background elements must be perfectly preserved. Angle: Tilted camera, adding an artistic and dynamic feel to a classic pose.' }
+        ]
     };
 
     function getDefaultPresetPrompts() {
@@ -164,6 +186,39 @@
                 background: #6366f1;
                 color: white;
                 border-color: #6366f1;
+            }
+            .mw-number-grid {
+                display: grid;
+                grid-template-columns: repeat(9, 1fr);
+                gap: 4px;
+                margin-bottom: 8px;
+            }
+            .mw-number-btn {
+                padding: 6px 4px;
+                background: #fef3c7;
+                border: 1px solid #fcd34d;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+                font-weight: 600;
+                color: #92400e;
+                transition: all 0.2s;
+                text-align: center;
+            }
+            .mw-number-btn:hover {
+                background: #f59e0b;
+                color: white;
+                border-color: #d97706;
+            }
+            .mw-number-grid.row2 .mw-number-btn {
+                background: #dbeafe;
+                border-color: #93c5fd;
+                color: #1e40af;
+            }
+            .mw-number-grid.row2 .mw-number-btn:hover {
+                background: #3b82f6;
+                color: white;
+                border-color: #2563eb;
             }
             .mw-input-area {
                 display: none;
@@ -619,8 +674,24 @@
         const config = state.config;
         const allPrompts = [...config.presetPrompts, ...config.customPrompts];
 
+        let numberGrid1Html = '<div class="mw-number-grid">';
+        for (let i = 0; i < 9; i++) {
+            const p = config.row1Prompts[i] || { prompt: '' };
+            numberGrid1Html += `<button class="mw-number-btn" data-row="1" data-index="${i}" data-prompt="${encodeURIComponent(p.prompt)}">${i + 1}</button>`;
+        }
+        numberGrid1Html += '</div>';
+
+        let numberGrid2Html = '<div class="mw-number-grid row2">';
+        for (let i = 0; i < 9; i++) {
+            const p = config.row2Prompts[i] || { prompt: '' };
+            numberGrid2Html += `<button class="mw-number-btn" data-row="2" data-index="${i}" data-prompt="${encodeURIComponent(p.prompt)}">${i + 1}</button>`;
+        }
+        numberGrid2Html += '</div>';
+
         let html = `
             <div class="mw-panel-title">AI 图片编辑</div>
+            ${numberGrid1Html}
+            ${numberGrid2Html}
             <div class="mw-preset-grid">
         `;
 
@@ -645,6 +716,16 @@
         const sendBtn = panel.querySelector('.mw-send-btn');
         const cancelBtn = panel.querySelector('.mw-cancel-btn');
         const presetBtns = panel.querySelectorAll('.mw-preset-btn');
+        const numberBtns = panel.querySelectorAll('.mw-number-btn');
+
+        numberBtns.forEach(numBtn => {
+            numBtn.addEventListener('click', () => {
+                const prompt = decodeURIComponent(numBtn.dataset.prompt);
+                if (prompt) {
+                    sendEditRequest(img, prompt, panel, btn);
+                }
+            });
+        });
 
         // 预置按钮点击
         presetBtns.forEach(presetBtn => {
@@ -1084,7 +1165,7 @@
     }
 
     // 脚本入口
-    console.log('[Magicwand] 脚本已加载，版本 1.0.1');
+    console.log('[Magicwand] 脚本已加载，版本 1.0.2');
 
     markHostContext();
     injectStyles();
