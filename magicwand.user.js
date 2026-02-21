@@ -99,8 +99,17 @@
     // 全局状态
     const state = {
         config: getConfig(),
-        processingImages: new Set()
+        processingImages: new Set(),
+        pinterestFloatBtn: null,
+        pinterestTargetImg: null,
+        pinterestHideTimer: null,
+        pendingPinterestImages: new Map(),
+        pendingPinterestTimer: null
     };
+
+    function isPinterestHost() {
+        return (window.location.hostname || '').includes('pinterest.com');
+    }
 
     function markHostContext() {
         const host = window.location.hostname || '';
@@ -147,6 +156,18 @@
                 right: auto;
                 bottom: 8px;
                 opacity: 0.7;
+            }
+            .mw-floating-btn {
+                position: fixed !important;
+                left: 0;
+                top: 0;
+                z-index: 2147483647 !important;
+                opacity: 0;
+                pointer-events: none;
+            }
+            .mw-floating-btn.show {
+                opacity: 0.9;
+                pointer-events: auto;
             }
 
             /* 编辑面板 */
@@ -584,9 +605,207 @@
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            if (!img) return;
             showEditPanel(img, btn);
         });
         return btn;
+    }
+
+    function hidePinterestFloatButton(immediate = false) {
+        if (!state.pinterestFloatBtn) return;
+        if (state.pinterestHideTimer) {
+            clearTimeout(state.pinterestHideTimer);
+            state.pinterestHideTimer = null;
+        }
+
+        const hide = () => {
+            if (!state.pinterestFloatBtn) return;
+            state.pinterestFloatBtn.classList.remove('show');
+            state.pinterestTargetImg = null;
+        };
+
+        if (immediate) {
+            hide();
+            return;
+        }
+
+        state.pinterestHideTimer = setTimeout(hide, 120);
+    }
+
+    function ensurePinterestFloatButton() {
+        if (!isPinterestHost()) return null;
+        if (state.pinterestFloatBtn && document.body.contains(state.pinterestFloatBtn)) {
+            return state.pinterestFloatBtn;
+        }
+
+        const btn = createEditButton(null);
+        btn.classList.add('mw-floating-btn');
+        btn.addEventListener('mouseenter', () => {
+            if (state.pinterestHideTimer) {
+                clearTimeout(state.pinterestHideTimer);
+                state.pinterestHideTimer = null;
+            }
+            btn.classList.add('show');
+        });
+        btn.addEventListener('mouseleave', () => {
+            hidePinterestFloatButton();
+        });
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (state.pinterestTargetImg) {
+                showEditPanel(state.pinterestTargetImg, btn);
+            }
+        });
+
+        document.body.appendChild(btn);
+        state.pinterestFloatBtn = btn;
+        return btn;
+    }
+
+    function updatePinterestFloatButtonPosition(img) {
+        const btn = ensurePinterestFloatButton();
+        if (!btn || !img || !document.body.contains(img)) {
+            hidePinterestFloatButton(true);
+            return;
+        }
+
+        const rect = img.getBoundingClientRect();
+        if (rect.width < 20 || rect.height < 20) {
+            hidePinterestFloatButton(true);
+            return;
+        }
+
+        if (state.pinterestHideTimer) {
+            clearTimeout(state.pinterestHideTimer);
+            state.pinterestHideTimer = null;
+        }
+
+        const margin = 8;
+        let left = rect.left + margin;
+        let top = rect.bottom - 32 - margin;
+        left = Math.max(4, Math.min(left, window.innerWidth - 36));
+        top = Math.max(4, Math.min(top, window.innerHeight - 36));
+
+        btn.style.left = `${Math.round(left)}px`;
+        btn.style.top = `${Math.round(top)}px`;
+        btn.classList.add('show');
+        state.pinterestTargetImg = img;
+    }
+
+    function setupPinterestHoverButton() {
+        if (!isPinterestHost()) return;
+
+        ensurePinterestFloatButton();
+
+        document.addEventListener('mouseover', (e) => {
+            const container = e.target.closest ? e.target.closest('.mw-container') : null;
+            if (!container) return;
+            const img = container.querySelector('img');
+            if (!img) return;
+            updatePinterestFloatButtonPosition(img);
+        }, true);
+
+        document.addEventListener('mousemove', (e) => {
+            const target = e.target;
+            if (!target || !target.closest) return;
+            const container = target.closest('.mw-container');
+            if (!container) return;
+            const img = container.querySelector('img');
+            if (!img) return;
+            if (state.pinterestTargetImg === img) return;
+            updatePinterestFloatButtonPosition(img);
+        }, true);
+
+        document.addEventListener('mouseout', (e) => {
+            const related = e.relatedTarget;
+            if (related && state.pinterestFloatBtn && state.pinterestFloatBtn.contains(related)) return;
+            const target = e.target;
+            if (!target || !target.closest) return;
+            if (target.closest('.mw-container')) {
+                hidePinterestFloatButton();
+            }
+        }, true);
+
+        const refreshPos = () => {
+            if (state.pinterestTargetImg) {
+                updatePinterestFloatButtonPosition(state.pinterestTargetImg);
+            }
+        };
+        window.addEventListener('scroll', refreshPos, true);
+        window.addEventListener('resize', refreshPos);
+    }
+
+    function shouldTrackPendingImage(img) {
+        if (!img || img.tagName !== 'IMG') return false;
+        if (img.hasAttribute('data-magicwand-processed')) return false;
+        if (img.closest('.mw-container') || img.closest('.mw-compare-container')) return false;
+        if (!img.src || img.src.startsWith('data:image/svg')) return false;
+        const rect = img.getBoundingClientRect();
+        return img.width >= 100 || img.height >= 100 || rect.width >= 100 || rect.height >= 100;
+    }
+
+    function stopPendingPinterestProcessorIfIdle() {
+        if (state.pendingPinterestImages.size === 0 && state.pendingPinterestTimer) {
+            clearInterval(state.pendingPinterestTimer);
+            state.pendingPinterestTimer = null;
+        }
+    }
+
+    function runPendingPinterestProcessor() {
+        const now = Date.now();
+
+        state.pendingPinterestImages.forEach((expireAt, img) => {
+            if (!img || !document.body.contains(img)) {
+                state.pendingPinterestImages.delete(img);
+                return;
+            }
+            if (img.hasAttribute('data-magicwand-processed') || img.closest('.mw-container')) {
+                state.pendingPinterestImages.delete(img);
+                return;
+            }
+            if (now > expireAt) {
+                state.pendingPinterestImages.delete(img);
+                return;
+            }
+            if (isProcessableImage(img)) {
+                processImage(img);
+                if (img.hasAttribute('data-magicwand-processed')) {
+                    state.pendingPinterestImages.delete(img);
+                }
+            }
+        });
+
+        stopPendingPinterestProcessorIfIdle();
+    }
+
+    function ensurePendingPinterestProcessor() {
+        if (state.pendingPinterestTimer) return;
+        state.pendingPinterestTimer = setInterval(runPendingPinterestProcessor, 250);
+    }
+
+    function trackPendingPinterestImage(img) {
+        if (!isPinterestHost()) return;
+        if (!shouldTrackPendingImage(img)) return;
+        state.pendingPinterestImages.set(img, Date.now() + 8000);
+        ensurePendingPinterestProcessor();
+    }
+
+    function collectPendingPinterestImages(limit = 200) {
+        if (!isPinterestHost()) return;
+        const images = document.querySelectorAll('img');
+        let count = 0;
+        for (const img of images) {
+            if (count >= limit) break;
+            if (shouldTrackPendingImage(img) && !isProcessableImage(img)) {
+                state.pendingPinterestImages.set(img, Date.now() + 8000);
+                count += 1;
+            }
+        }
+        if (count > 0) {
+            ensurePendingPinterestProcessor();
+        }
     }
 
     // 检查图片是否可处理
@@ -601,9 +820,9 @@
 
     // 处理单个图片
     function processImage(img) {
-        if (!isProcessableImage(img)) return;
-        if (img.closest('.mw-compare-container')) return;
-        if (img.closest('.mw-container')) return;
+        if (!isProcessableImage(img)) return false;
+        if (img.closest('.mw-compare-container')) return false;
+        if (img.closest('.mw-container')) return false;
 
         img.setAttribute('data-magicwand-processed', 'true');
 
@@ -633,25 +852,47 @@
         img.parentNode.insertBefore(container, img);
         container.appendChild(img);
 
-        const btn = createEditButton(img);
-        container.appendChild(btn);
+        if (!isPinterestHost()) {
+            const btn = createEditButton(img);
+            container.appendChild(btn);
+        }
+
+        return true;
     }
 
     // 扫描页面所有图片
     function scanImages() {
         const images = document.querySelectorAll('img');
         images.forEach(processImage);
+        if (isPinterestHost()) {
+            collectPendingPinterestImages(160);
+        }
     }
 
     // 设置MutationObserver监听新图片
     function setupObserver() {
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.target && mutation.target.tagName === 'IMG') {
+                    const done = processImage(mutation.target);
+                    if (!done) {
+                        trackPendingPinterestImage(mutation.target);
+                    }
+                    return;
+                }
                 mutation.addedNodes.forEach((node) => {
                     if (node.tagName === 'IMG') {
-                        processImage(node);
+                        const done = processImage(node);
+                        if (!done) {
+                            trackPendingPinterestImage(node);
+                        }
                     } else if (node.querySelectorAll) {
-                        node.querySelectorAll('img').forEach(processImage);
+                        node.querySelectorAll('img').forEach((img) => {
+                            const done = processImage(img);
+                            if (!done) {
+                                trackPendingPinterestImage(img);
+                            }
+                        });
                     }
                 });
             });
@@ -659,8 +900,41 @@
 
         observer.observe(document.body, {
             childList: true,
-            subtree: true
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['src', 'srcset']
         });
+    }
+
+    function setupPinterestRouteRescan() {
+        if (!isPinterestHost()) return;
+
+        const triggerRescan = () => {
+            [50, 350, 900, 1500, 3000, 6000].forEach((delay) => {
+                setTimeout(() => {
+                    scanImages();
+                    collectPendingPinterestImages(240);
+                }, delay);
+            });
+        };
+
+        const originalPushState = history.pushState;
+        const originalReplaceState = history.replaceState;
+
+        history.pushState = function (...args) {
+            const result = originalPushState.apply(this, args);
+            triggerRescan();
+            return result;
+        };
+
+        history.replaceState = function (...args) {
+            const result = originalReplaceState.apply(this, args);
+            triggerRescan();
+            return result;
+        };
+
+        window.addEventListener('popstate', triggerRescan);
+        window.addEventListener('hashchange', triggerRescan);
     }
 
     // 当前活动的面板
@@ -874,7 +1148,11 @@
             return;
         }
 
-        const imgSrc = img.getAttribute('data-original-src') || img.src;
+        const imgSrc = getBestImageSrc(img);
+        if (!imgSrc) {
+            showError(panel, '无法获取图片地址');
+            return;
+        }
         const imgKey = imgSrc.substring(0, 100);
 
         if (state.processingImages.has(imgKey)) {
@@ -903,6 +1181,18 @@
             state.processingImages.delete(imgKey);
             hideProcessingOverlay(processingOverlay);
         }
+    }
+
+    function getBestImageSrc(img) {
+        const originalSrc = img.getAttribute('data-original-src');
+        const currentSrc = img.currentSrc;
+        const rawSrc = img.src;
+        const candidates = [originalSrc, currentSrc, rawSrc];
+
+        const normal = candidates.find((src) => src && !src.startsWith('blob:'));
+        if (normal) return normal;
+
+        return candidates.find(Boolean) || '';
     }
 
     // 获取图片Blob
@@ -1185,10 +1475,14 @@
         document.addEventListener('DOMContentLoaded', () => {
             scanImages();
             setupObserver();
+            setupPinterestHoverButton();
+            setupPinterestRouteRescan();
         });
     } else {
         scanImages();
         setupObserver();
+        setupPinterestHoverButton();
+        setupPinterestRouteRescan();
     }
 
     console.log('[Magicwand] 初始化完成');
