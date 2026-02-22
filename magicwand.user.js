@@ -108,7 +108,11 @@
         pinterestTargetImg: null,
         pinterestHideTimer: null,
         pendingPinterestImages: new Map(),
-        pendingPinterestTimer: null
+        pendingPinterestTimer: null,
+        videoFloatBtn: null,
+        videoTarget: null,
+        videoHideTimer: null,
+        activeVideoCompare: null
     };
 
     function isPinterestHost() {
@@ -170,6 +174,18 @@
                 pointer-events: none;
             }
             .mw-floating-btn.show {
+                opacity: 0.9;
+                pointer-events: auto;
+            }
+            .mw-video-floating-btn {
+                position: fixed !important;
+                left: 0;
+                top: 0;
+                z-index: 2147483647 !important;
+                opacity: 0;
+                pointer-events: none;
+            }
+            .mw-video-floating-btn.show {
                 opacity: 0.9;
                 pointer-events: auto;
             }
@@ -578,6 +594,20 @@
                 text-shadow: 0 1px 3px rgba(0,0,0,0.3);
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }
+            .mw-video-processing-overlay {
+                position: fixed;
+                border-radius: 8px;
+                z-index: 10001;
+                pointer-events: none;
+            }
+            .mw-video-compare-layer {
+                position: fixed;
+                z-index: 10001;
+            }
+            .mw-video-compare-layer .mw-compare-container {
+                width: 100%;
+                height: 100%;
+            }
         `);
     }
 
@@ -592,13 +622,17 @@
     </svg>`;
 
     // 创建编辑按钮
-    function createEditButton(img) {
+    function createEditButton(img, onClick) {
         const btn = document.createElement('div');
         btn.className = 'mw-edit-btn';
         btn.innerHTML = MAGIC_WAND_SVG;
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            if (typeof onClick === 'function') {
+                onClick(e, btn);
+                return;
+            }
             if (!img) return;
             showEditPanel(img, btn);
         });
@@ -727,6 +761,137 @@
                 updatePinterestFloatButtonPosition(state.pinterestTargetImg);
             }
         };
+        window.addEventListener('scroll', refreshPos, true);
+        window.addEventListener('resize', refreshPos);
+    }
+
+    function isVideoElement(el) {
+        return !!el && el.tagName === 'VIDEO';
+    }
+
+    function isProcessableVideo(video) {
+        if (!isVideoElement(video)) return false;
+        const rect = video.getBoundingClientRect();
+        if (rect.width < 100 || rect.height < 100) return false;
+        if (video.readyState < 2) return false;
+        if (video.ended) return false;
+        if (!video.paused) return false;
+        return true;
+    }
+
+    function findVideoAtPoint(x, y) {
+        const elements = document.elementsFromPoint(x, y);
+        return elements.find((el) => isProcessableVideo(el)) || null;
+    }
+
+    function hideVideoFloatButton(immediate = false) {
+        if (!state.videoFloatBtn) return;
+        if (state.videoHideTimer) {
+            clearTimeout(state.videoHideTimer);
+            state.videoHideTimer = null;
+        }
+
+        const hide = () => {
+            if (!state.videoFloatBtn) return;
+            state.videoFloatBtn.classList.remove('show');
+            state.videoTarget = null;
+        };
+
+        if (immediate) {
+            hide();
+            return;
+        }
+
+        state.videoHideTimer = setTimeout(hide, 120);
+    }
+
+    function ensureVideoFloatButton() {
+        if (state.videoFloatBtn && document.body.contains(state.videoFloatBtn)) {
+            return state.videoFloatBtn;
+        }
+
+        const btn = createEditButton(null, () => {
+            if (state.videoTarget) {
+                showEditPanel(state.videoTarget, btn);
+            }
+        });
+        btn.classList.add('mw-video-floating-btn');
+        btn.addEventListener('mouseenter', () => {
+            if (state.videoHideTimer) {
+                clearTimeout(state.videoHideTimer);
+                state.videoHideTimer = null;
+            }
+            btn.classList.add('show');
+        });
+        btn.addEventListener('mouseleave', () => {
+            hideVideoFloatButton();
+        });
+        document.body.appendChild(btn);
+        state.videoFloatBtn = btn;
+        return btn;
+    }
+
+    function updateVideoFloatButtonPosition(video) {
+        const btn = ensureVideoFloatButton();
+        if (!btn || !video || !document.body.contains(video) || !isProcessableVideo(video)) {
+            hideVideoFloatButton(true);
+            return;
+        }
+
+        if (state.videoHideTimer) {
+            clearTimeout(state.videoHideTimer);
+            state.videoHideTimer = null;
+        }
+
+        const rect = video.getBoundingClientRect();
+        const margin = 8;
+        let left = rect.right - 32 - margin;
+        let top = rect.bottom - 32 - margin;
+        left = Math.max(4, Math.min(left, window.innerWidth - 36));
+        top = Math.max(4, Math.min(top, window.innerHeight - 36));
+
+        btn.style.left = `${Math.round(left)}px`;
+        btn.style.top = `${Math.round(top)}px`;
+        btn.classList.add('show');
+        state.videoTarget = video;
+    }
+
+    function setupVideoHoverButton() {
+        ensureVideoFloatButton();
+
+        document.addEventListener('mousemove', (e) => {
+            const video = findVideoAtPoint(e.clientX, e.clientY);
+            if (!video) {
+                hideVideoFloatButton();
+                return;
+            }
+            updateVideoFloatButtonPosition(video);
+        }, true);
+
+        document.addEventListener('mouseout', (e) => {
+            const related = e.relatedTarget;
+            if (related && state.videoFloatBtn && state.videoFloatBtn.contains(related)) return;
+            hideVideoFloatButton();
+        }, true);
+
+        document.addEventListener('play', (e) => {
+            if (e.target && e.target === state.videoTarget) {
+                hideVideoFloatButton(true);
+            }
+            if (state.activeVideoCompare && e.target && e.target === state.activeVideoCompare.video) {
+                clearActiveVideoCompare();
+            }
+        }, true);
+
+        const refreshPos = () => {
+            if (state.videoTarget) {
+                updateVideoFloatButtonPosition(state.videoTarget);
+            }
+            if (state.activeVideoCompare && typeof state.activeVideoCompare.updatePosition === 'function') {
+                state.activeVideoCompare.updatePosition();
+            }
+        };
+
         window.addEventListener('scroll', refreshPos, true);
         window.addEventListener('resize', refreshPos);
     }
@@ -938,6 +1103,7 @@
     function createEditPanel(img, btn) {
         const panel = document.createElement('div');
         panel.className = 'mw-panel';
+        const isVideoTarget = isVideoElement(img);
 
         const config = state.config;
         const allPrompts = [...config.presetPrompts, ...config.customPrompts];
@@ -951,7 +1117,7 @@
         numberGrid1Html += '</div>';
 
         let html = `
-            <div class="mw-panel-title">AI 图片编辑</div>
+            <div class="mw-panel-title">AI ${isVideoTarget ? '暂停帧' : '图片'}编辑</div>
             ${numberGrid1Html}
             <div class="mw-preset-grid">
         `;
@@ -1038,13 +1204,25 @@
             showError(panel, '请先配置API端点地址');
             return;
         }
+        const isVideoTarget = isVideoElement(img);
+        let imgKey = '';
+        let imageBlob = null;
+        let originalSrc = '';
 
-        const imgSrc = getBestImageSrc(img);
-        if (!imgSrc) {
-            showError(panel, '无法获取图片地址');
-            return;
+        if (isVideoTarget) {
+            if (!img.paused) {
+                img.pause();
+            }
+            const roundedTime = Math.round((img.currentTime || 0) * 5) / 5;
+            imgKey = `video:${location.host}:${roundedTime}:${(img.currentSrc || '').substring(0, 80)}`;
+        } else {
+            const imgSrc = getBestImageSrc(img);
+            if (!imgSrc) {
+                showError(panel, '无法获取图片地址');
+                return;
+            }
+            imgKey = imgSrc.substring(0, 100);
         }
-        const imgKey = imgSrc.substring(0, 100);
 
         if (state.processingImages.has(imgKey)) {
             return;
@@ -1052,11 +1230,19 @@
         state.processingImages.add(imgKey);
 
         showLoading(panel);
-        const container = img.closest('.mw-container');
+        const container = !isVideoTarget ? img.closest('.mw-container') : null;
         const processingOverlay = container ? showProcessingOverlay(container, '双图生成中...') : null;
+        const videoOverlay = isVideoTarget ? buildVideoProcessingOverlay(img, '双图生成中...') : null;
 
         try {
-            const imageBlob = await fetchImage(imgSrc);
+            if (isVideoTarget) {
+                imageBlob = await captureVideoFrame(img);
+                originalSrc = URL.createObjectURL(imageBlob);
+            } else {
+                const imgSrc = getBestImageSrc(img);
+                imageBlob = await fetchImage(imgSrc);
+                originalSrc = img.src;
+            }
             const [newImageBlob1, newImageBlob2] = await Promise.all([
                 callEditAPI(imageBlob, prompt1, config),
                 callEditAPI(imageBlob, prompt2, config)
@@ -1064,16 +1250,22 @@
 
             const newImageUrl1 = URL.createObjectURL(newImageBlob1);
             const newImageUrl2 = URL.createObjectURL(newImageBlob2);
-            const originalSrc = img.src;
 
             closePanel();
-            showCompareView(img, originalSrc, newImageUrl1, newImageUrl2, '双图对比', btn);
+            if (isVideoTarget) {
+                showVideoCompareView(img, originalSrc, newImageUrl1, newImageUrl2, '双图对比', btn);
+            } else {
+                showCompareView(img, originalSrc, newImageUrl1, newImageUrl2, '双图对比', btn);
+            }
         } catch (error) {
             console.error('[Magicwand] 双图编辑失败:', error);
             showError(panel, error.message || '双图编辑失败，请重试');
         } finally {
             state.processingImages.delete(imgKey);
             hideProcessingOverlay(processingOverlay);
+            if (videoOverlay) {
+                videoOverlay.destroy();
+            }
         }
     }
 
@@ -1176,6 +1368,87 @@
         }
     }
 
+    function captureVideoFrame(video) {
+        return new Promise((resolve, reject) => {
+            try {
+                if (!isVideoElement(video)) {
+                    reject(new Error('当前目标不是视频'));
+                    return;
+                }
+                const width = video.videoWidth || Math.max(1, Math.round(video.clientWidth));
+                const height = video.videoHeight || Math.max(1, Math.round(video.clientHeight));
+                if (width < 2 || height < 2) {
+                    reject(new Error('视频帧尚未就绪，请稍后重试'));
+                    return;
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, width, height);
+                canvas.toBlob((blob) => {
+                    if (!blob) {
+                        reject(new Error('暂停帧导出失败'));
+                        return;
+                    }
+                    resolve(blob);
+                }, 'image/png');
+            } catch (error) {
+                if (error && error.name === 'SecurityError') {
+                    reject(new Error('该站点视频当前不支持直接取帧（跨域限制），请改为截图后编辑'));
+                    return;
+                }
+                reject(error);
+            }
+        });
+    }
+
+    function buildVideoProcessingOverlay(video, prompt) {
+        const overlay = document.createElement('div');
+        overlay.className = 'mw-processing-overlay mw-video-processing-overlay';
+        overlay.innerHTML = `<span class="mw-processing-text">${prompt.substring(0, 20)}${prompt.length > 20 ? '...' : ''}</span>`;
+        document.body.appendChild(overlay);
+
+        const updatePosition = () => {
+            if (!video || !document.body.contains(video) || !overlay.parentNode) return;
+            const rect = video.getBoundingClientRect();
+            overlay.style.left = `${Math.round(rect.left)}px`;
+            overlay.style.top = `${Math.round(rect.top)}px`;
+            overlay.style.width = `${Math.round(rect.width)}px`;
+            overlay.style.height = `${Math.round(rect.height)}px`;
+        };
+
+        const onMove = () => updatePosition();
+        window.addEventListener('scroll', onMove, true);
+        window.addEventListener('resize', onMove);
+        updatePosition();
+
+        return {
+            overlay,
+            destroy: () => {
+                window.removeEventListener('scroll', onMove, true);
+                window.removeEventListener('resize', onMove);
+                hideProcessingOverlay(overlay);
+            }
+        };
+    }
+
+    function getVideoCompareTarget(video) {
+        if (!isVideoElement(video)) return null;
+        if (!document.body.contains(video)) return null;
+        const rect = video.getBoundingClientRect();
+        if (rect.width < 20 || rect.height < 20) return null;
+        return rect;
+    }
+
+    function clearActiveVideoCompare() {
+        if (state.activeVideoCompare && typeof state.activeVideoCompare.destroy === 'function') {
+            state.activeVideoCompare.destroy();
+        }
+        state.activeVideoCompare = null;
+    }
+
     // 发送编辑请求
     async function sendEditRequest(img, prompt, panel, btn) {
         const config = state.config;
@@ -1184,13 +1457,25 @@
             showError(panel, '请先配置API端点地址');
             return;
         }
+        const isVideoTarget = isVideoElement(img);
+        let imgKey = '';
+        let imageBlob = null;
+        let originalSrc = '';
 
-        const imgSrc = getBestImageSrc(img);
-        if (!imgSrc) {
-            showError(panel, '无法获取图片地址');
-            return;
+        if (isVideoTarget) {
+            if (!img.paused) {
+                img.pause();
+            }
+            const roundedTime = Math.round((img.currentTime || 0) * 5) / 5;
+            imgKey = `video:${location.host}:${roundedTime}:${(img.currentSrc || '').substring(0, 80)}`;
+        } else {
+            const imgSrc = getBestImageSrc(img);
+            if (!imgSrc) {
+                showError(panel, '无法获取图片地址');
+                return;
+            }
+            imgKey = imgSrc.substring(0, 100);
         }
-        const imgKey = imgSrc.substring(0, 100);
 
         if (state.processingImages.has(imgKey)) {
             return;
@@ -1198,18 +1483,28 @@
         state.processingImages.add(imgKey);
 
         showLoading(panel);
-        const container = img.closest('.mw-container');
+        const container = !isVideoTarget ? img.closest('.mw-container') : null;
         const processingOverlay = container ? showProcessingOverlay(container, prompt) : null;
+        const videoOverlay = isVideoTarget ? buildVideoProcessingOverlay(img, prompt) : null;
 
         try {
-            const imageBlob = await fetchImage(imgSrc);
+            if (isVideoTarget) {
+                imageBlob = await captureVideoFrame(img);
+                originalSrc = URL.createObjectURL(imageBlob);
+            } else {
+                const imgSrc = getBestImageSrc(img);
+                imageBlob = await fetchImage(imgSrc);
+                originalSrc = img.src;
+            }
             const newImageBlob = await callEditAPI(imageBlob, prompt, config);
 
             const newImageUrl = URL.createObjectURL(newImageBlob);
-            const originalSrc = img.src;
-
             closePanel();
-            showCompareView(img, originalSrc, newImageUrl, originalSrc, prompt, btn);
+            if (isVideoTarget) {
+                showVideoCompareView(img, originalSrc, newImageUrl, originalSrc, prompt, btn);
+            } else {
+                showCompareView(img, originalSrc, newImageUrl, originalSrc, prompt, btn);
+            }
 
         } catch (error) {
             console.error('[Magicwand] 编辑失败:', error);
@@ -1217,6 +1512,9 @@
         } finally {
             state.processingImages.delete(imgKey);
             hideProcessingOverlay(processingOverlay);
+            if (videoOverlay) {
+                videoOverlay.destroy();
+            }
         }
     }
 
@@ -1381,6 +1679,121 @@
         originalImg.setAttribute('data-original-src', originalSrc);
     }
 
+    function showVideoCompareView(video, originalSrc, newSrc, oldSrc, prompt, editBtn) {
+        const rect = getVideoCompareTarget(video);
+        if (!rect) return;
+        clearActiveVideoCompare();
+        hideVideoFloatButton(true);
+
+        const computedStyle = window.getComputedStyle(video);
+        const objectFit = computedStyle.objectFit || 'contain';
+        const objectPosition = computedStyle.objectPosition || '50% 50%';
+
+        const layer = document.createElement('div');
+        layer.className = 'mw-video-compare-layer';
+        document.body.appendChild(layer);
+
+        const compareContainer = document.createElement('div');
+        compareContainer.className = 'mw-compare-container';
+        compareContainer.innerHTML = `
+            <img class="mw-new-image" src="${newSrc}" style="object-fit: ${objectFit}; object-position: ${objectPosition};">
+            <img class="mw-old-image" src="${oldSrc}" style="object-fit: ${objectFit}; object-position: ${objectPosition};">
+            <div class="mw-slider-line"></div>
+            <div class="mw-slider-handle">${ARROW_SVG}</div>
+            <div class="mw-compare-actions">
+                <button class="mw-compare-action-btn mw-restore-btn">恢复原画</button>
+                <button class="mw-compare-action-btn mw-reedit-btn">重新编辑</button>
+            </div>
+        `;
+        layer.appendChild(compareContainer);
+
+        const oldImage = compareContainer.querySelector('.mw-old-image');
+        const sliderLine = compareContainer.querySelector('.mw-slider-line');
+        const sliderHandle = compareContainer.querySelector('.mw-slider-handle');
+        const restoreBtn = compareContainer.querySelector('.mw-restore-btn');
+        const reeditBtn = compareContainer.querySelector('.mw-reedit-btn');
+
+        function updateSlider(x) {
+            const currentRect = compareContainer.getBoundingClientRect();
+            let percent = ((x - currentRect.left) / currentRect.width) * 100;
+            percent = Math.max(0, Math.min(100, percent));
+            oldImage.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
+            sliderLine.style.left = `${percent}%`;
+            sliderHandle.style.left = `${percent}%`;
+        }
+
+        compareContainer.addEventListener('mousemove', (e) => {
+            updateSlider(e.clientX);
+        });
+        compareContainer.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1) {
+                updateSlider(e.touches[0].clientX);
+            }
+        });
+
+        const updatePosition = () => {
+            const currentRect = getVideoCompareTarget(video);
+            if (!currentRect) {
+                destroy();
+                return;
+            }
+            layer.style.left = `${Math.round(currentRect.left)}px`;
+            layer.style.top = `${Math.round(currentRect.top)}px`;
+            layer.style.width = `${Math.round(currentRect.width)}px`;
+            layer.style.height = `${Math.round(currentRect.height)}px`;
+        };
+
+        const onScrollOrResize = () => updatePosition();
+        window.addEventListener('scroll', onScrollOrResize, true);
+        window.addEventListener('resize', onScrollOrResize);
+
+        const cleanupUrls = () => {
+            if (newSrc && newSrc.startsWith('blob:')) {
+                URL.revokeObjectURL(newSrc);
+            }
+            if (oldSrc && oldSrc.startsWith('blob:')) {
+                URL.revokeObjectURL(oldSrc);
+            }
+            if (originalSrc && originalSrc.startsWith('blob:') && originalSrc !== oldSrc) {
+                URL.revokeObjectURL(originalSrc);
+            }
+        };
+
+        const destroy = () => {
+            window.removeEventListener('scroll', onScrollOrResize, true);
+            window.removeEventListener('resize', onScrollOrResize);
+            if (layer.parentNode) {
+                layer.remove();
+            }
+            cleanupUrls();
+            if (state.activeVideoCompare && state.activeVideoCompare.layer === layer) {
+                state.activeVideoCompare = null;
+            }
+        };
+
+        restoreBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            destroy();
+        });
+
+        reeditBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            destroy();
+            showEditPanel(video, editBtn || state.videoFloatBtn);
+        });
+
+        state.activeVideoCompare = {
+            video,
+            layer,
+            updatePosition,
+            destroy
+        };
+
+        updatePosition();
+    }
+
     // 显示设置面板
     function showSettingsPanel() {
         const config = state.config;
@@ -1523,12 +1936,14 @@
             setupObserver();
             setupPinterestHoverButton();
             setupPinterestRouteRescan();
+            setupVideoHoverButton();
         });
     } else {
         scanImages();
         setupObserver();
         setupPinterestHoverButton();
         setupPinterestRouteRescan();
+        setupVideoHoverButton();
     }
 
     console.log('[Magicwand] 初始化完成');
