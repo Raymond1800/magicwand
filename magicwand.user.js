@@ -119,6 +119,11 @@
         return (window.location.hostname || '').includes('pinterest.com');
     }
 
+    function isBlacklistedHost() {
+        const host = (window.location.hostname || '').toLowerCase();
+        return host === 'javbus.com' || host.endsWith('.javbus.com');
+    }
+
     function markHostContext() {
         const host = window.location.hostname || '';
         if (host.includes('pinterest.com')) {
@@ -1915,6 +1920,11 @@
 
     // 脚本入口
     console.log('[Magicwand] 脚本已加载，版本 1.0.4');
+
+    if (isBlacklistedHost()) {
+        console.log('[Magicwand] 当前站点在黑名单中，已跳过初始化');
+        return;
+    }
 
     markHostContext();
     injectStyles();
