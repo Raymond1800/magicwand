@@ -24,42 +24,49 @@
         apiKey: '',
         enabled: true,
         presetPrompts: [
-            { name: '全', prompt: "Remove all clothing from the subject, rendering them completely nude. Scatter the panties, bra, tights, and other clothing on the ground beside the body. The subject's face, expression, hairstyle, body contours, and pose must be perfectly preserved. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
-            { name: '颜', prompt: "Rerender the subject's facial expression to show an intense orgasm face: eyes rolled upward, tongue slightly extended, and drool flowing from the mouth. It is crucial to perfectly preserve the subject's facial structure, hairstyle, body, clothing, and pose. The background, lighting, and shadows must remain identical to the original image." },
-            { name: '碎', prompt: "Rerender the subject's clothing to appear heavily damaged after a violent struggle: the shirt and pants/skirt should be shredded and torn, with some parts forcefully pulled open, showing frayed edges. The overall appearance must be chaotic and disheveled. It is crucial to perfectly preserve the subject's face, expression, hairstyle, body contour, and pose. The background, lighting, and shadows must remain identical to the original image." },
-            { name: '透', prompt: "Rerender the subject's outer clothing into a semi-transparent material, making it sheer enough to clearly reveal the underlying garments and body contours underneath. The fabric folds and drape should remain natural. It is crucial to perfectly preserve the subject's face, expression, hairstyle, body contour, and pose. The background, lighting, and shadows must remain identical to the original image." },
-            { name: '黑', prompt: "Replace the subject's outfit with a black bikini lingerie set paired with black thigh-high stockings. It is crucial to perfectly preserve the subject's face, expression, hairstyle, body contour, and pose. The background, lighting, and shadows must remain identical to the original image." },
-            { name: '红', prompt: "Replace the subject's outfit with a red bikini lingerie set paired with red thigh-high stockings. It is crucial to perfectly preserve the subject's face, expression, hairstyle, body contour, and pose. The background, lighting, and shadows must remain identical to the original image." },
-            { name: '口', prompt: "change to pov from man view. the subject is sucking a penis, doing a blowjob. trnsparent white liquid over her face and drops.The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
-            { name: '口2', prompt: "Change the woman's pose to kneeling on the floor directly in front of the man, knees together or slightly apart, upper body leaning slightly forward, hands resting on his thighs. A single man is standing directly in front of her, facing her, with one or both hands gently resting on or holding her head/hair while she performs oral sex on his erect penis with her mouth. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
-            { name: '口3', prompt: "Change the woman's pose to kneeling on the floor between the seated man's spread legs, leaning forward over his lap, hands placed on his thighs or the chair seat for support. A single man is sitting on a chair or the edge of a bed, legs spread apart, facing toward the woman while leaning back slightly as she performs oral sex on his erect penis with her mouth and tongue. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
-            { name: 'C', prompt: "Change the woman's pose to straddling the man facing him, sitting upright with knees bent, hands on his chest for support. A man lying flat on his back below her is holding her waist while she rides him, his penis inside her vagina. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
-            { name: 'M', prompt: "Change the woman's pose to lying flat on her back, legs spread wide apart, modify her to be receiving vaginal penetration from a man outside the frame who is actively having sex with her, his penis inserted inside her vagina. A man outside the frame is thrusting into her during intercourse. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged. Realistic photo style" },
-            { name: 'D', prompt: "Adjust the woman's pose to on all fours oriented strictly sideways to the lens in side profile, back arched downward naturally, hips elevated high and angled back, knees spread for balance, and looking to the viewer. A man behind her is fucking her, the man's penis is in her pussy. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
-            { name: 'D2', prompt: "Change the woman's pose to on all fours facing slightly to the side (three-quarter view toward the viewer), back naturally arched downward with correct spine curve, hips raised high and pushed back, knees spread shoulder-width, head turned toward the viewer to make her face clearly visible in profile or partial front view. From a first-person POV looking at the woman as the central and dominant subject from a slightly angled rear-side position (not purely from directly behind), show only the man's erect penis, lower abdomen, partial thighs, and gripping hands on her hips in the frame while thrusting into her vagina from behind during intercourse, with her face, upper body, arched back, hips, and legs fully enhanced and detailed as the main focus. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." }
+            { name: '全', prompt: "Remove all clothing from the subject, rendering them completely nude. Scatter the panties, bra, tights, and other clothing on the ground beside the body. {decorator}The subject's face, expression, hairstyle, body contours, and pose must be perfectly preserved. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: '颜', prompt: "Rerender the subject's facial expression to show an intense orgasm face: eyes rolled upward, tongue slightly extended, and drool flowing from the mouth. {decorator}It is crucial to perfectly preserve the subject's facial structure, hairstyle, body, clothing, and pose. The background, lighting, and shadows must remain identical to the original image." },
+            { name: '碎', prompt: "Rerender the subject's clothing to appear heavily damaged after a violent struggle: the shirt and pants/skirt should be shredded and torn, with some parts forcefully pulled open, showing frayed edges. The overall appearance must be chaotic and disheveled. {decorator}It is crucial to perfectly preserve the subject's face, expression, hairstyle, body contour, and pose. The background, lighting, and shadows must remain identical to the original image." },
+            { name: '透', prompt: "Rerender the subject's outer clothing into a semi-transparent material, making it sheer enough to clearly reveal the underlying garments and body contours underneath. The fabric folds and drape should remain natural. {decorator}It is crucial to perfectly preserve the subject's face, expression, hairstyle, body contour, and pose. The background, lighting, and shadows must remain identical to the original image." },
+            { name: '黑', prompt: "Replace the subject's outfit with a black bikini lingerie set paired with black thigh-high stockings. {decorator}It is crucial to perfectly preserve the subject's face, expression, hairstyle, body contour, and pose. The background, lighting, and shadows must remain identical to the original image." },
+            { name: '红', prompt: "Replace the subject's outfit with a red bikini lingerie set paired with red thigh-high stockings. {decorator}It is crucial to perfectly preserve the subject's face, expression, hairstyle, body contour, and pose. The background, lighting, and shadows must remain identical to the original image." },
+            { name: '口', prompt: "change to pov from man view. the subject is sucking a penis, doing a blowjob. trnsparent white liquid over her face and drops. {decorator}The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: '口2', prompt: "Change the woman's pose to kneeling on the floor directly in front of the man, knees together or slightly apart, upper body leaning slightly forward, hands resting on his thighs. A single man is standing directly in front of her, facing her, with one or both hands gently resting on or holding her head/hair while she performs oral sex on his erect penis with her mouth. {decorator}The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: '口3', prompt: "Change the woman's pose to kneeling on the floor between the viewer's spread legs, leaning forward over the lap with natural shoulder and arm positioning for support, hands on the thighs, hips aligned anatomically for stability. From a first-person POV looking down at the woman as the central subject while seated, show only the man's erect penis, lower abdomen, and partial thighs/hands in the frame while she performs oral sex on his penis with her mouth, enhancing her facial and upper body details. {decorator}The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged. Realistic photo style" },
+            { name: 'C', prompt: "Change the woman's pose to straddling the man facing him, sitting upright with knees bent, hands on his chest for support. A man lying flat on his back below her is holding her waist while she rides him, his penis inside her vagina. {decorator}The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: 'M', prompt: "Change the woman's pose to lying flat on her back, legs spread wide apart, modify her to be receiving vaginal penetration from a man outside the frame who is actively having sex with her, his penis inserted inside her vagina. A man outside the frame is thrusting into her during intercourse. {decorator}The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged. Realistic photo style" },
+            { name: 'D', prompt: "Adjust the woman's pose to on all fours oriented strictly sideways to the lens in side profile, back arched downward naturally, hips elevated high and angled back, knees spread for balance, and looking to the viewer. A man behind her is fucking her, the man's penis is in her pussy. {decorator}The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: 'D2', prompt: "Change the woman's pose to on all fours facing slightly to the side (three-quarter view toward the viewer), back naturally arched downward with correct spine curve, hips raised high and pushed back, knees spread shoulder-width, head turned toward the viewer to make her face clearly visible in profile or partial front view. From a first-person POV looking at the woman as the central and dominant subject from a slightly angled rear-side position (not purely from directly behind), show only the man's erect penis, lower abdomen, partial thighs, and gripping hands on her hips in the frame while thrusting into her vagina from behind during intercourse, with her face, upper body, arched back, hips, and legs fully enhanced and detailed as the main focus. {decorator}The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: '互动', prompt: "Adjust the woman's pose to standing with body slightly turned to the side, head tilted toward the man, legs slightly apart, and looking to the viewer. A tall, high-built man stands closely to her side, facing the women. Her hand is firmly gripping and holding the man's penis. {decorator}The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: '互动2', prompt: "Adjust the woman's pose to standing straight, legs slightly apart, head slightly tilted to expose her ear, and looking to the viewer. A tall, high-built man stands closely behind her, his face visible near her ear as he kisses and gently nibbles her earlobe, both of his hands caressing and squeezing her breasts over her top, his thick and intensely erect cock visibly bulging and straining against his pants. {decorator}The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: '互动3', prompt: "Adjust the woman's pose to kneeling on the floor with her upper body straight, head tilted slightly upward and turned toward the man, mouth slightly open, and looking to the viewer. A tall, high-built man stands in front of her, facing her, his thick erect penis positioned right next to the side of her face, close to her cheek. Her left hand is gently holding the base of his penis, guiding it near her face. {decorator}The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: '互动4', prompt: "Adjust the woman's pose to lying on her side on a bed, propped up on one elbow, head resting on her hand, face turned toward the man, and looking to the viewer. A tall, high-built man kneels or stands beside the bed facing her, his thick erect penis resting horizontally against her cheek and near her mouth. Her free hand is gently cupping and holding his penis against her face. {decorator}The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: '互动5', prompt: "Adjust the woman's pose to kneeling on the floor, upper body upright, head tilted slightly upward, chest pushed forward. A tall, high-built man stands in front of her, his thick erect penis is rubbing against the woman's breasts. {decorator}The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." }
         ],
         customPrompts: [],
+        decorators: [
+        ],
         row1Prompts: [
-            { prompt: 'Remove all clothing from the subject, leaving them lying on their back as seen from a high angle looking directly down. Scatter the panties, bra, tights, and other clothing on the ground beside the body. Their pose should be open and inviting. Critically, maintain the original face, hair, and identity without any change. The surrounding environment must stay identical. Angle: Top-down view, emphasizing the form on a flat plane.' },
-            { prompt: 'Remove all clothing from the subject. From a dramatic low angle looking up, the person is standing tall and confidently. Scatter the panties, bra, tights, and other clothing on the ground beside the body. This perspective should make them look powerful. It is essential to preserve their exact facial features and expression. Do not alter the background or lighting. Angle: Worm\'s-eye view, creating a sense of dominance and height.' },
-            { prompt: 'Remove all clothing from the subject, leaving them in a side profile view, kneeling gracefully on the floor. Scatter the panties, bra, tights, and other clothing on the ground beside the body. Their body should be turned exactly 90 degrees from the camera to highlight their silhouette. The character\'s face and identity must be perfectly preserved. Keep all other parts of the image unchanged. Angle: Strict side view, focusing on the outline and curves of the body.' },
-            { prompt: 'Remove all clothing from the subject, leaving them in a direct frontal view, standing with a powerful and alluring stance facing the camera. Scatter the panties, bra, tights, and other clothing on the ground beside the body. Ensure their face, hair, and unique identity are not altered in any way. The background must remain exactly as it is. Angle: Eye-level, head-on shot, creating a direct and engaging connection.' },
-            { prompt: 'Remove all clothing from the subject. Depict the person from a high camera angle, looking down as they kneel on the ground, and looking up seductively towards the camera. Scatter the panties, bra, tights, and other clothing on the ground beside the body. It is absolutely essential to keep the facial identity identical to the original. Do not modify the rest of the scene. Angle: High-angle view, creating a dynamic of looking down upon the subject.' },
-            { prompt: 'Remove all clothing from the subject, leaving them sitting on the edge of a high chair or table, captured from a very low angle. Scatter the panties, bra, tights, and other clothing on the ground beside the body. Their legs should be the focus of the composition. Preserve the person\'s face and hair perfectly. The environment must not be changed. Angle: Very low angle, accentuating the length of the body and creating a provocative mood.' },
-            { prompt: 'Remove all clothing from the subject, leaving them positioned in a prone pose (on their stomach or hands and knees) with their buttocks raised and aimed directly at the camera. Scatter the panties, bra, tights, and other clothing on the ground beside the body. They should be looking back over their shoulder, making seductive eye contact with the viewer. The camera\'s focus must be sharply locked on their hips and buttocks, making this the clearest and most detailed area of the image. It is absolutely critical to preserve the person\'s face, hair, and identity without any changes. The background and lighting must also remain identical.' },
-            { prompt: 'Remove all clothing from the subject, leaving them in a three-quarters view, leaning forward against a wall or railing. Scatter the panties, bra, tights, and other clothing on the ground beside the body. Their body is angled to the camera to create depth and show form. Do not alter the subject\'s face or unique features. The background must stay the same. Angle: A dynamic angle between front and side, often considered most flattering for form.' },
-            { prompt: 'Remove all clothing from the subject. Using a slight dutch angle to make the scene feel more dynamic, the character is in a standing contrapposto pose, with their weight shifted to one foot. Scatter the panties, bra, tights, and other clothing on the ground beside the body. The camera tilt should add a sense of unease or excitement. The facial features, expression, and all background elements must be perfectly preserved. Angle: Tilted camera, adding an artistic and dynamic feel to a classic pose.' }
+            { prompt: 'Remove all clothing from the subject, leaving them lying on their back as seen from a high angle looking directly down. Scatter the panties, bra, tights, and other clothing on the ground beside the body. {decorator}Their pose should be open and inviting. Critically, maintain the original face, hair, and identity without any change. The surrounding environment must stay identical. Angle: Top-down view, emphasizing the form on a flat plane.' },
+            { prompt: 'Remove all clothing from the subject. From a dramatic low angle looking up, the person is standing tall and confidently. Scatter the panties, bra, tights, and other clothing on the ground beside the body. {decorator}This perspective should make them look powerful. It is essential to preserve their exact facial features and expression. Do not alter the background or lighting. Angle: Worm\'s-eye view, creating a sense of dominance and height.' },
+            { prompt: 'Remove all clothing from the subject, leaving them in a side profile view, kneeling gracefully on the floor. Scatter the panties, bra, tights, and other clothing on the ground beside the body. {decorator}Their body should be turned exactly 90 degrees from the camera to highlight their silhouette. The character\'s face and identity must be perfectly preserved. Keep all other parts of the image unchanged. Angle: Strict side view, focusing on the outline and curves of the body.' },
+            { prompt: 'Remove all clothing from the subject, leaving them in a direct frontal view, standing with a powerful and alluring stance facing the camera. Scatter the panties, bra, tights, and other clothing on the ground beside the body. {decorator}Ensure their face, hair, and unique identity are not altered in any way. The background must remain exactly as it is. Angle: Eye-level, head-on shot, creating a direct and engaging connection.' },
+            { prompt: 'Remove all clothing from the subject. Depict the person from a high camera angle, looking down as they kneel on the ground, and looking up seductively towards the camera. Scatter the panties, bra, tights, and other clothing on the ground beside the body. {decorator}It is absolutely essential to keep the facial identity identical to the original. Do not modify the rest of the scene. Angle: High-angle view, creating a dynamic of looking down upon the subject.' },
+            { prompt: 'Remove all clothing from the subject, leaving them sitting on the edge of a high chair or table, captured from a very low angle. Scatter the panties, bra, tights, and other clothing on the ground beside the body. {decorator}Their legs should be the focus of the composition. Preserve the person\'s face and hair perfectly. The environment must not be changed. Angle: Very low angle, accentuating the length of the body and creating a provocative mood.' },
+            { prompt: 'Remove all clothing from the subject, leaving them positioned in a prone pose (on their stomach or hands and knees) with their buttocks raised and aimed directly at the camera. Scatter the panties, bra, tights, and other clothing on the ground beside the body. {decorator}They should be looking back over their shoulder, making seductive eye contact with the viewer. The camera\'s focus must be sharply locked on their hips and buttocks, making this the clearest and most detailed area of the image. It is absolutely critical to preserve the person\'s face, hair, and identity without any changes. The background and lighting must also remain identical.' },
+            { prompt: 'Remove all clothing from the subject, leaving them in a three-quarters view, leaning forward against a wall or railing. Scatter the panties, bra, tights, and other clothing on the ground beside the body. {decorator}Their body is angled to the camera to create depth and show form. Do not alter the subject\'s face or unique features. The background must stay the same. Angle: A dynamic angle between front and side, often considered most flattering for form.' },
+            { prompt: 'Remove all clothing from the subject. Using a slight dutch angle to make the scene feel more dynamic, the character is in a standing contrapposto pose, with their weight shifted to one foot. Scatter the panties, bra, tights, and other clothing on the ground beside the body. {decorator}The camera tilt should add a sense of unease or excitement. The facial features, expression, and all background elements must be perfectly preserved. Angle: Tilted camera, adding an artistic and dynamic feel to a classic pose.' }
         ],
         row2Prompts: [
-            { prompt: 'Adjust the subject\'s pose to lying on their back as seen from a high angle looking directly down. Their pose should be open and inviting. Critically, maintain the original face, hair, and identity without any change. The surrounding environment must stay identical. Angle: Top-down view, emphasizing the form on a flat plane.' },
-            { prompt: 'Adjust the subject\'s pose to standing tall and confidently. From a dramatic low angle looking up, this perspective should make them look powerful. It is essential to preserve their exact facial features and expression. Do not alter the background or lighting. Angle: Worm\'s-eye view, creating a sense of dominance and height.' },
-            { prompt: 'Adjust the subject\'s pose to a side profile view, kneeling gracefully on the floor. Their body should be turned exactly 90 degrees from the camera to highlight their silhouette. The character\'s face and identity must be perfectly preserved. Keep all other parts of the image unchanged. Angle: Strict side view, focusing on the outline and curves of the body.' },
-            { prompt: 'Adjust the subject\'s pose to a direct frontal view, standing with a powerful and alluring stance facing the camera. Ensure their face, hair, and unique identity are not altered in any way. The background must remain exactly as it is. Angle: Eye-level, head-on shot, creating a direct and engaging connection.' },
-            { prompt: 'Adjust the subject\'s pose to kneeling on the ground, looking up seductively towards the camera from a high camera angle. It is absolutely essential to keep the facial identity identical to the original. Do not modify the rest of the scene. Angle: High-angle view, creating a dynamic of looking down upon the subject.' },
-            { prompt: 'Adjust the subject\'s pose to sitting on the edge of a high chair or table, captured from a very low angle. Their legs should be the focus of the composition. Preserve the person\'s face and hair perfectly. The environment must not be changed. Angle: Very low angle, accentuating the length of the body and creating a provocative mood.' },
-            { prompt: 'Adjust the subject\'s pose to a prone pose (on their stomach or hands and knees) with their buttocks raised and aimed directly at the camera. They should be looking back over their shoulder, making seductive eye contact with the viewer. The camera\'s focus must be sharply locked on their hips and buttocks, making this the clearest and most detailed area of the image. It is absolutely critical to preserve the person\'s face, hair, and identity without any changes. The background and lighting must also remain identical.' },
-            { prompt: 'Adjust the subject\'s pose to a three-quarters view, leaning forward against a wall or railing. Their body is angled to the camera to create depth and show form. Do not alter the subject\'s face or unique features. The background must stay the same. Angle: A dynamic angle between front and side, often considered most flattering for form.' },
-            { prompt: 'Adjust the subject\'s pose to a standing contrapposto pose, with their weight shifted to one foot. Using a slight dutch angle to make the scene feel more dynamic, the camera tilt should add a sense of unease or excitement. The facial features, expression, and all background elements must be perfectly preserved. Angle: Tilted camera, adding an artistic and dynamic feel to a classic pose.' }
+            { prompt: 'Adjust the subject\'s pose to lying on their back as seen from a high angle looking directly down. {decorator}Their pose should be open and inviting. Critically, maintain the original face, hair, and identity without any change. The surrounding environment must stay identical. Angle: Top-down view, emphasizing the form on a flat plane.' },
+            { prompt: 'Adjust the subject\'s pose to standing tall and confidently. From a dramatic low angle looking up, this perspective should make them look powerful. {decorator}It is essential to preserve their exact facial features and expression. Do not alter the background or lighting. Angle: Worm\'s-eye view, creating a sense of dominance and height.' },
+            { prompt: 'Adjust the subject\'s pose to a side profile view, kneeling gracefully on the floor. {decorator}Their body should be turned exactly 90 degrees from the camera to highlight their silhouette. The character\'s face and identity must be perfectly preserved. Keep all other parts of the image unchanged. Angle: Strict side view, focusing on the outline and curves of the body.' },
+            { prompt: 'Adjust the subject\'s pose to a direct frontal view, standing with a powerful and alluring stance facing the camera. {decorator}Ensure their face, hair, and unique identity are not altered in any way. The background must remain exactly as it is. Angle: Eye-level, head-on shot, creating a direct and engaging connection.' },
+            { prompt: 'Adjust the subject\'s pose to kneeling on the ground, looking up seductively towards the camera from a high camera angle. {decorator}It is absolutely essential to keep the facial identity identical to the original. Do not modify the rest of the scene. Angle: High-angle view, creating a dynamic of looking down upon the subject.' },
+            { prompt: 'Adjust the subject\'s pose to sitting on the edge of a high chair or table, captured from a very low angle. {decorator}Their legs should be the focus of the composition. Preserve the person\'s face and hair perfectly. The environment must not be changed. Angle: Very low angle, accentuating the length of the body and creating a provocative mood.' },
+            { prompt: 'Adjust the subject\'s pose to a prone pose (on their stomach or hands and knees) with their buttocks raised and aimed directly at the camera. {decorator}They should be looking back over their shoulder, making seductive eye contact with the viewer. The camera\'s focus must be sharply locked on their hips and buttocks, making this the clearest and most detailed area of the image. It is absolutely critical to preserve the person\'s face, hair, and identity without any changes. The background and lighting must also remain identical.' },
+            { prompt: 'Adjust the subject\'s pose to a three-quarters view, leaning forward against a wall or railing. {decorator}Their body is angled to the camera to create depth and show form. Do not alter the subject\'s face or unique features. The background must stay the same. Angle: A dynamic angle between front and side, often considered most flattering for form.' },
+            { prompt: 'Adjust the subject\'s pose to a standing contrapposto pose, with their weight shifted to one foot. Using a slight dutch angle to make the scene feel more dynamic, the camera tilt should add a sense of unease or excitement. {decorator}The facial features, expression, and all background elements must be perfectly preserved. Angle: Tilted camera, adding an artistic and dynamic feel to a classic pose.' }
         ]
     };
 
@@ -86,6 +93,9 @@
                 if (!Array.isArray(config.customPrompts)) {
                     config.customPrompts = [];
                 }
+                if (!Array.isArray(config.customDecorators)) {
+                    config.customDecorators = [];
+                }
                 return config;
             } catch (e) {
                 return buildDefaultConfig();
@@ -100,7 +110,8 @@
             apiUrl: typeof config.apiUrl === 'string' ? config.apiUrl : '',
             apiKey: typeof config.apiKey === 'string' ? config.apiKey : '',
             enabled: typeof config.enabled === 'boolean' ? config.enabled : true,
-            customPrompts: Array.isArray(config.customPrompts) ? config.customPrompts : []
+            customPrompts: Array.isArray(config.customPrompts) ? config.customPrompts : [],
+            customDecorators: Array.isArray(config.customDecorators) ? config.customDecorators : []
         };
         GM_setValue('magicwand_config', JSON.stringify(configToSave));
     }
@@ -218,9 +229,9 @@
                 margin-bottom: 10px;
             }
             .mw-preset-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
                 margin-bottom: 10px;
             }
             .mw-preset-btn {
@@ -237,6 +248,40 @@
                 background: #6366f1;
                 color: white;
                 border-color: #6366f1;
+            }
+            .mw-decorator-row {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 4px;
+                margin-bottom: 10px;
+                padding: 6px 8px;
+                background: #f0f9ff;
+                border-radius: 6px;
+            }
+            .mw-decorator-label {
+                font-size: 11px;
+                color: #0369a1;
+                font-weight: 500;
+                margin-right: 4px;
+            }
+            .mw-decorator-btn {
+                padding: 3px 8px;
+                background: white;
+                border: 1px solid #bae6fd;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 11px;
+                color: #0c4a6e;
+                transition: all 0.2s;
+            }
+            .mw-decorator-btn:hover {
+                background: #e0f2fe;
+            }
+            .mw-decorator-btn.selected {
+                background: #0ea5e9;
+                color: white;
+                border-color: #0284c7;
             }
             .mw-number-grid {
                 display: grid;
@@ -1108,6 +1153,15 @@
 
     // 当前活动的面板
     let activePanel = null;
+    let selectedDecorators = [];
+
+    function mergeDecoratorsWithPrompt(prompt, decorators) {
+        if (!decorators || decorators.length === 0) {
+            return prompt.replace(/{decorator}/g, '');
+        }
+        const merged = decorators.join('. ') + '. ';
+        return prompt.replace(/{decorator}/g, merged);
+    }
 
     // 创建编辑面板
     function createEditPanel(img, btn) {
@@ -1117,6 +1171,7 @@
 
         const config = state.config;
         const allPrompts = [...config.presetPrompts, ...config.customPrompts];
+        const allDecorators = [...(config.decorators || []), ...(config.customDecorators || [])];
 
         let numberGrid1Html = '<div class="mw-number-grid">';
         for (let i = 0; i < 9; i++) {
@@ -1126,9 +1181,19 @@
         }
         numberGrid1Html += '</div>';
 
+        let decoratorHtml = '';
+        if (allDecorators.length > 0) {
+            decoratorHtml = '<div class="mw-decorator-row"><span class="mw-decorator-label">装饰:</span>';
+            allDecorators.forEach((d, i) => {
+                decoratorHtml += `<button class="mw-decorator-btn" data-decorator="${encodeURIComponent(d.prompt)}">${d.name}</button>`;
+            });
+            decoratorHtml += '</div>';
+        }
+
         let html = `
             <div class="mw-panel-title">AI ${isVideoTarget ? '暂停帧' : '图片'}编辑</div>
             ${numberGrid1Html}
+            ${decoratorHtml}
             <div class="mw-preset-grid">
         `;
 
@@ -1154,13 +1219,34 @@
         const cancelBtn = panel.querySelector('.mw-cancel-btn');
         const presetBtns = panel.querySelectorAll('.mw-preset-btn');
         const numberBtns = panel.querySelectorAll('.mw-number-btn');
+        const decoratorBtns = panel.querySelectorAll('.mw-decorator-btn');
+
+        selectedDecorators = [];
+
+        decoratorBtns.forEach(decBtn => {
+            decBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const decoratorPrompt = decodeURIComponent(decBtn.dataset.decorator || '');
+                if (decBtn.classList.contains('selected')) {
+                    decBtn.classList.remove('selected');
+                    selectedDecorators = selectedDecorators.filter(d => d !== decoratorPrompt);
+                } else {
+                    decBtn.classList.add('selected');
+                    selectedDecorators.push(decoratorPrompt);
+                }
+            });
+        });
 
         numberBtns.forEach(numBtn => {
             numBtn.addEventListener('click', () => {
                 const prompt1 = decodeURIComponent(numBtn.dataset.prompt1 || '');
                 const prompt2 = decodeURIComponent(numBtn.dataset.prompt2 || '');
                 if (prompt1 && prompt2) {
-                    sendDualEditRequest(img, prompt1, prompt2, panel, btn);
+                    const mergedPrompt1 = mergeDecoratorsWithPrompt(prompt1, selectedDecorators);
+                    const mergedPrompt2 = mergeDecoratorsWithPrompt(prompt2, selectedDecorators);
+                    selectedDecorators = [];
+                    sendDualEditRequest(img, mergedPrompt1, mergedPrompt2, panel, btn);
                 } else {
                     showError(panel, '该编号提示词未配置完整');
                 }
@@ -1176,7 +1262,9 @@
                     sendBtn.disabled = false;
                 } else {
                     const prompt = decodeURIComponent(presetBtn.dataset.prompt);
-                    sendEditRequest(img, prompt, panel, btn);
+                    const mergedPrompt = mergeDecoratorsWithPrompt(prompt, selectedDecorators);
+                    selectedDecorators = [];
+                    sendEditRequest(img, mergedPrompt, panel, btn);
                 }
             });
         });
@@ -1187,19 +1275,24 @@
         });
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && input.value.trim()) {
-                sendEditRequest(img, input.value.trim(), panel, btn);
+                const mergedPrompt = mergeDecoratorsWithPrompt(input.value.trim(), selectedDecorators);
+                selectedDecorators = [];
+                sendEditRequest(img, mergedPrompt, panel, btn);
             }
         });
 
         // 发送按钮
         sendBtn.addEventListener('click', () => {
             if (input.value.trim()) {
-                sendEditRequest(img, input.value.trim(), panel, btn);
+                const mergedPrompt = mergeDecoratorsWithPrompt(input.value.trim(), selectedDecorators);
+                selectedDecorators = [];
+                sendEditRequest(img, mergedPrompt, panel, btn);
             }
         });
 
         // 取消按钮
         cancelBtn.addEventListener('click', () => {
+            selectedDecorators = [];
             closePanel();
         });
 
@@ -1812,6 +1905,7 @@
         overlay.className = 'mw-settings-overlay';
 
         const allPrompts = [...config.presetPrompts, ...config.customPrompts];
+        const allDecorators = [...(config.decorators || []), ...(config.customDecorators || [])];
 
         let promptsHtml = '';
         allPrompts.forEach((p, i) => {
@@ -1823,6 +1917,20 @@
                         <div class="mw-prompt-text">${p.prompt}</div>
                     </div>
                     ${!isPreset ? `<button class="mw-prompt-delete" data-index="${i - config.presetPrompts.length}">删除</button>` : ''}
+                </div>
+            `;
+        });
+
+        let decoratorsHtml = '';
+        allDecorators.forEach((d, i) => {
+            const isPreset = i < (config.decorators ? config.decorators.length : 0);
+            decoratorsHtml += `
+                <div class="mw-prompt-item" data-decorator-index="${i}" data-preset="${isPreset}">
+                    <div class="mw-prompt-info">
+                        <div class="mw-prompt-name">${d.name}</div>
+                        <div class="mw-prompt-text">${d.prompt}</div>
+                    </div>
+                    ${!isPreset ? `<button class="mw-prompt-delete mw-decorator-delete" data-index="${i - (config.decorators ? config.decorators.length : 0)}">删除</button>` : ''}
                 </div>
             `;
         });
@@ -1848,6 +1956,13 @@
                     <button class="mw-add-prompt-btn">+ 添加自定义提示词</button>
                 </div>
 
+                <div class="mw-settings-group">
+                    <label class="mw-settings-label">装饰器效果</label>
+                    <div class="mw-prompts-list mw-decorators-list">${decoratorsHtml}</div>
+                    <button class="mw-add-prompt-btn mw-add-decorator-btn">+ 添加自定义装饰器</button>
+                    <div class="mw-settings-hint">装饰器可与任意提示词组合使用</div>
+                </div>
+
                 <div class="mw-settings-footer">
                     <button class="mw-save-btn">保存设置</button>
                     <button class="mw-close-btn">关闭</button>
@@ -1860,15 +1975,30 @@
         const apiUrlInput = overlay.querySelector('.mw-api-url');
         const apiKeyInput = overlay.querySelector('.mw-api-key');
         const addPromptBtn = overlay.querySelector('.mw-add-prompt-btn');
+        const addDecoratorBtn = overlay.querySelector('.mw-add-decorator-btn');
         const saveBtn = overlay.querySelector('.mw-save-btn');
         const closeBtn = overlay.querySelector('.mw-close-btn');
         const promptsList = overlay.querySelector('.mw-prompts-list');
+        const decoratorsList = overlay.querySelector('.mw-decorators-list');
 
         // 删除自定义提示词
         promptsList.addEventListener('click', (e) => {
             if (e.target.classList.contains('mw-prompt-delete')) {
                 const index = parseInt(e.target.dataset.index);
                 config.customPrompts.splice(index, 1);
+                state.config = config;
+                saveConfig(config);
+                overlay.remove();
+                showSettingsPanel();
+            }
+        });
+
+        // 删除自定义装饰器
+        decoratorsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('mw-decorator-delete')) {
+                const index = parseInt(e.target.dataset.index);
+                if (!config.customDecorators) config.customDecorators = [];
+                config.customDecorators.splice(index, 1);
                 state.config = config;
                 saveConfig(config);
                 overlay.remove();
@@ -1884,6 +2014,21 @@
             if (!promptText) return;
 
             config.customPrompts.push({ name, prompt: promptText });
+            state.config = config;
+            saveConfig(config);
+            overlay.remove();
+            showSettingsPanel();
+        });
+
+        // 添加自定义装饰器
+        addDecoratorBtn.addEventListener('click', () => {
+            const name = prompt('装饰器名称:');
+            if (!name) return;
+            const promptText = prompt('装饰器提示词:');
+            if (!promptText) return;
+
+            if (!config.customDecorators) config.customDecorators = [];
+            config.customDecorators.push({ name, prompt: promptText });
             state.config = config;
             saveConfig(config);
             overlay.remove();
