@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magicwand - 魔法图片编辑
 // @namespace    https://magicwand.ai/
-// @version      1.0.10
+// @version      1.0.11
 // @description  AI图片编辑油猴脚本，支持预置提示词和自定义编辑
 // @author       Magicwand
 // @match        *://*/*
@@ -31,7 +31,12 @@
             { name: '黑', prompt: "Replace the subject's outfit with a black bikini lingerie set paired with black thigh-high stockings. It is crucial to perfectly preserve the subject's face, expression, hairstyle, body contour, and pose. The background, lighting, and shadows must remain identical to the original image." },
             { name: '红', prompt: "Replace the subject's outfit with a red bikini lingerie set paired with red thigh-high stockings. It is crucial to perfectly preserve the subject's face, expression, hairstyle, body contour, and pose. The background, lighting, and shadows must remain identical to the original image." },
             { name: '口', prompt: "change to pov from man view. the subject is sucking a penis, doing a blowjob. trnsparent white liquid over her face and drops.The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
-            { name: 'M', prompt: "Change subject's pose to Missionary position, sexual activity, Male penis inserted into female genital area, subject is positioned on her back, legs spread wide apart, with her hands resting on her inner thighs, holding her legs open. The man outside the screen is inserting into the woman's genitals. The character's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." }
+            { name: '口2', prompt: "Change the woman's pose to kneeling on the floor directly in front of the man, knees together or slightly apart, upper body leaning slightly forward, hands resting on his thighs. A single man is standing directly in front of her, facing her, with one or both hands gently resting on or holding her head/hair while she performs oral sex on his erect penis with her mouth. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: '口3', prompt: "Change the woman's pose to kneeling on the floor between the seated man's spread legs, leaning forward over his lap, hands placed on his thighs or the chair seat for support. A single man is sitting on a chair or the edge of a bed, legs spread apart, facing toward the woman while leaning back slightly as she performs oral sex on his erect penis with her mouth and tongue. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: 'C', prompt: "Change the woman's pose to straddling the man facing him, sitting upright with knees bent, hands on his chest for support. A man lying flat on his back below her is holding her waist while she rides him, his penis inside her vagina. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: 'M', prompt: "Change the woman's pose to lying flat on her back, legs spread wide apart, modify her to be receiving vaginal penetration from a man outside the frame who is actively having sex with her, his penis inserted inside her vagina. A man outside the frame is thrusting into her during intercourse. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged. Realistic photo style" },
+            { name: 'D', prompt: "Adjust the woman's pose to on all fours oriented strictly sideways to the lens in side profile, back arched downward naturally, hips elevated high and angled back, knees spread for balance, and looking to the viewer. A man behind her is fucking her, the man's penis is in her pussy. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." },
+            { name: 'D2', prompt: "Change the woman's pose to on all fours facing slightly to the side (three-quarter view toward the viewer), back naturally arched downward with correct spine curve, hips raised high and pushed back, knees spread shoulder-width, head turned toward the viewer to make her face clearly visible in profile or partial front view. From a first-person POV looking at the woman as the central and dominant subject from a slightly angled rear-side position (not purely from directly behind), show only the man's erect penis, lower abdomen, partial thighs, and gripping hands on her hips in the frame while thrusting into her vagina from behind during intercourse, with her face, upper body, arched back, hips, and legs fully enhanced and detailed as the main focus. The woman's appearance and expression must remain strictly unchanged. The background, lighting, and shadows must also be identical to the original image; everything else remains unchanged." }
         ],
         customPrompts: [],
         row1Prompts: [
@@ -219,12 +224,12 @@
                 margin-bottom: 10px;
             }
             .mw-preset-btn {
-                padding: 8px 12px;
+                padding: 4px 8px;
                 background: #f3f4f6;
                 border: 1px solid #e5e7eb;
-                border-radius: 8px;
+                border-radius: 4px;
                 cursor: pointer;
-                font-size: 12px;
+                font-size: 11px;
                 color: #374151;
                 transition: all 0.2s;
             }
