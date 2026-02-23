@@ -45,6 +45,7 @@
         ],
         customPrompts: [],
         decorators: [
+            { name: 'cum', prompt: 'women has cum on her face' }
         ],
         row1Prompts: [
             { prompt: 'Remove all clothing from the subject, leaving them lying on their back as seen from a high angle looking directly down. Scatter the panties, bra, tights, and other clothing on the ground beside the body. {decorator}Their pose should be open and inviting. Critically, maintain the original face, hair, and identity without any change. The surrounding environment must stay identical. Angle: Top-down view, emphasizing the form on a flat plane.' },
