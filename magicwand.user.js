@@ -58,14 +58,37 @@
 
         { name: '互动4', prompt: "Adjust the woman's pose to lying on her side on a bed, propped on elbow, head on hand, looking at viewer. A tall muscular man beside the bed, his thick erect penis resting on her cheek near her mouth; her hand cupping and holding it. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical." },
 
-        { name: '互动5', prompt: "Adjust the woman's pose to kneeling, upper body upright, chest pushed forward. A tall muscular man stands in front, his thick erect penis rubbing against her breasts. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical. Photorealistic." }
+        { name: '互动5', prompt: "Adjust the woman's pose to kneeling, upper body upright, chest pushed forward. A tall muscular man stands in front, his thick erect penis rubbing against her breasts. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical. Photorealistic." },
+    
+        { name: '躺开', prompt: "Completely remove all clothing from the woman, rendering her fully nude, lying flat on her back, legs spread extremely wide apart in an inviting M-shape or butterfly position, knees bent outward, feet flat or raised, pussy fully exposed and centered. {decorator} (perfect facial fidelity:1.5), (identical identity:1.5) It is absolutely critical to keep the exact same woman from the original image: face, expression, hairstyle, body proportions, skin texture, and pose unchanged. Background, lighting, shadows, and composition must be 100% identical. Photorealistic, raw photo, best quality, ultra detailed, sharp focus, natural skin, detailed pussy." },
+
+        { name: '趴开', prompt: "Completely remove all clothing from the woman, rendering her fully nude, in prone position with hips raised high and ass aimed directly at the camera (face-down ass-up), legs spread extremely wide apart, back deeply arched, knees apart for balance, looking back over her shoulder seductively at the viewer. {decorator} (perfect facial fidelity:1.5), (identical identity:1.5) It is absolutely critical to keep the exact same woman from the original image: face, expression, hairstyle, body proportions, skin texture unchanged. Background, lighting, shadows, and composition must be 100% identical. Photorealistic, raw photo, best quality, ultra detailed, sharp focus, detailed ass and pussy from behind." }
+    
     ],
     customPrompts: [],
     decorators: [
         { name: '散', prompt: 'Scatter her panties, bra, tights, stockings and all other clothing items realistically on the ground around her body.' },
         { name: 'cof', prompt: 'the woman has thick realistic cum on her face, glossy semen dripping from mouth and cheeks' },
         { name: 'cob', prompt: 'the woman has thick realistic cum on her breasts and cleavage, glossy semen dripping' },
-        { name: 'cop', prompt: 'the woman has thick realistic cum on and inside her pussy, glossy semen dripping down thighs' }
+        { name: 'cop', prompt: 'the woman has thick realistic cum on and inside her pussy, glossy semen dripping down thighs' },
+        { name: 'swe', prompt: 'the woman is covered in glistening sweat, shiny wet skin, beads of sweat rolling down body and face' },
+        { name: 'oil', prompt: "the woman's entire body is glistening with oil, extremely shiny and reflective skin" },
+        { name: 'tea', prompt: 'tears of pleasure streaming down her cheeks, ruined mascara, wet eyes' },
+        { name: 'bit', prompt: 'visible red bite marks and hickeys on neck, breasts, thighs and shoulders' },
+        { name: 'han', prompt: 'red handprints and fingerprints on her ass, breasts and waist' },
+        { name: 'col', prompt: 'wearing a tight black leather collar with a metal ring and short chain leash' },
+        { name: 'cla', prompt: 'silver nipple clamps with thin chains attached, pulling on her nipples' },
+        { name: 'vib', prompt: 'a thick pink vibrator deeply inserted in her pussy, visibly vibrating' },
+        { name: 'dld', prompt: 'a large realistic dildo inserted in her vagina, base visible' },
+        { name: 'plg', prompt: 'a shiny metal butt plug inserted in her ass, jewel base visible' },
+        { name: 'tor', prompt: 'black thigh-high stockings with large runs, tears and laddering' },
+        { name: 'mak', prompt: 'heavily smeared makeup, runny mascara, smeared lipstick from intense activity' },
+        { name: 'blu', prompt: 'intense deep blushing across face, neck and chest, aroused flush' },
+        { name: 'wet', prompt: 'extremely wet and glistening pussy, visible arousal fluids dripping' },
+        { name: 'squ', prompt: 'female ejaculation / squirting fluids spraying and dripping everywhere' },
+        { name: 'mil', prompt: 'milk leaking from her nipples, glossy white droplets on breasts' },
+        { name: 'har', prompt: 'light red whip marks and welts across her ass and back' },
+        { name: 'tat', prompt: 'temporary sexy tattoos or writing on her body: "cumslut", "property", heart symbols' }
     ],
     row1Prompts: [
         { prompt: "Completely remove all clothing from the woman, rendering her fully nude, lying on her back from high top-down angle looking directly down. {decorator} (perfect facial fidelity:1.45) Pose open and inviting. Keep the exact same woman from the original image: face, hair, identity unchanged. Environment identical. Photorealistic, raw photo, ultra detailed, sharp focus." },
