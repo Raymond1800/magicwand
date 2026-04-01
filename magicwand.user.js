@@ -24,41 +24,41 @@
     apiKey: '',
     enabled: true,
     presetPrompts: [
-        { name: '全', prompt: "Completely remove all clothing from the woman, rendering her fully nude. {decorator} (perfect facial fidelity:1.45), (identical identity:1.45) It is absolutely critical to keep the exact same woman from the original image: face, expression, hairstyle, body proportions, skin texture, and pose unchanged. Background, lighting, shadows, and composition must be 100% identical. Photorealistic, raw photo, best quality, ultra detailed, sharp focus, natural skin." },
+        { name: '全裸', prompt: "Completely remove all clothing from the woman, rendering her fully nude. {decorator} (perfect facial fidelity:1.45), (identical identity:1.45) It is absolutely critical to keep the exact same woman from the original image: face, expression, hairstyle, body proportions, skin texture, and pose unchanged. Background, lighting, shadows, and composition must be 100% identical. Photorealistic, raw photo, best quality, ultra detailed, sharp focus, natural skin." },
 
-        { name: '颜', prompt: "Change only the woman's facial expression to an intense ahegao orgasm face: eyes rolled back upward, tongue slightly extended with drool dripping from mouth and chin, flushed cheeks, ecstasy expression. {decorator} (perfect facial fidelity:1.5), (identical identity:1.5) Keep the exact same woman from the original image: facial structure, hairstyle, body, clothing, pose, background, lighting, shadows completely unchanged. Photorealistic, raw photo, best quality, ultra detailed, sharp focus." },
+        { name: '绝顶颜', prompt: "Change only the woman's facial expression to an intense ahegao orgasm face: eyes rolled back upward, tongue slightly extended with drool dripping from mouth and chin, flushed cheeks, ecstasy expression. {decorator} (perfect facial fidelity:1.5), (identical identity:1.5) Keep the exact same woman from the original image: facial structure, hairstyle, body, clothing, pose, background, lighting, shadows completely unchanged. Photorealistic, raw photo, best quality, ultra detailed, sharp focus." },
 
-        { name: '碎', prompt: "Rerender the woman's clothing as heavily damaged and torn after violent struggle: shirt and pants/skirt shredded with large tears, fabric pulled open, frayed edges, chaotic and disheveled look, some skin visible through rips. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image: face, expression, hairstyle, body contours, pose unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, ultra detailed fabric damage, sharp focus." },
+        { name: '碎衣', prompt: "Rerender the woman's clothing as heavily damaged and torn after violent struggle: shirt and pants/skirt shredded with large tears, fabric pulled open, frayed edges, chaotic and disheveled look, some skin visible through rips. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image: face, expression, hairstyle, body contours, pose unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, ultra detailed fabric damage, sharp focus." },
 
-        { name: '透', prompt: "Make the woman's outer clothing extremely sheer and semi-transparent fabric, clearly revealing her underwear and body contours underneath while keeping natural folds, wrinkles and drape. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image: face, expression, hairstyle, body, pose unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, best quality, ultra detailed sheer fabric." },
+        { name: '透视', prompt: "Make the woman's outer clothing extremely sheer and semi-transparent fabric, clearly revealing her underwear and body contours underneath while keeping natural folds, wrinkles and drape. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image: face, expression, hairstyle, body, pose unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, best quality, ultra detailed sheer fabric." },
 
-        { name: '黑', prompt: "Replace the woman's outfit with a sexy black micro bikini lingerie set paired with black thigh-high stockings and garter straps. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions, pose unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, ultra detailed lingerie." },
+        { name: '黑内衣', prompt: "Replace the woman's outfit with a sexy black micro bikini lingerie set paired with black thigh-high stockings and garter straps. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions, pose unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, ultra detailed lingerie." },
 
-        { name: '红', prompt: "Replace the woman's outfit with a sexy red micro bikini lingerie set paired with red thigh-high stockings and garter straps. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions, pose unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, ultra detailed lingerie." },
+        { name: '红内衣', prompt: "Replace the woman's outfit with a sexy red micro bikini lingerie set paired with red thigh-high stockings and garter straps. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions, pose unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, ultra detailed lingerie." },
 
-        { name: '口', prompt: "Change to first-person POV from man's view. The woman is sucking an erect penis, performing a deep blowjob, transparent white cum covering her face with dripping drops. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body, background, lighting, shadows identical. Photorealistic, raw photo, ultra detailed fluids." },
+        { name: '口交', prompt: "Change to first-person POV from man's view. The woman is sucking an erect penis, performing a deep blowjob, transparent white cum covering her face with dripping drops. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body, background, lighting, shadows identical. Photorealistic, raw photo, ultra detailed fluids." },
 
-        { name: '口2', prompt: "Change the woman's pose to kneeling on the floor directly in front of the man, knees together or slightly apart, upper body leaning forward, hands on his thighs. A single man stands in front of her, hands gently holding her head/hair while she performs oral sex on his erect penis. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic, raw photo." },
+        { name: '跪口', prompt: "Change the woman's pose to kneeling on the floor directly in front of the man, knees together or slightly apart, upper body leaning forward, hands on his thighs. A single man stands in front of her, hands gently holding her head/hair while she performs oral sex on his erect penis. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic, raw photo." },
 
-        { name: '口3', prompt: "First-person POV looking down: the woman kneeling between the viewer's spread legs, leaning forward over the lap, hands on thighs, performing oral sex on the erect penis. Show only man's lower abdomen, penis and hands, focus on woman's face and upper body. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body unchanged. Background, lighting, shadows identical. Realistic photo style, ultra detailed." },
+        { name: '跨腿口', prompt: "First-person POV looking down: the woman kneeling between the viewer's spread legs, leaning forward over the lap, hands on thighs, performing oral sex on the erect penis. Show only man's lower abdomen, penis and hands, focus on woman's face and upper body. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body unchanged. Background, lighting, shadows identical. Realistic photo style, ultra detailed." },
 
-        { name: 'C', prompt: "Change the woman's pose to straddling the man facing him, sitting upright, knees bent, hands on his chest. The man is lying on his back holding her waist, his penis inside her vagina during riding. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, detailed penetration." },
+        { name: '骑乘', prompt: "Change the woman's pose to straddling the man facing him, sitting upright, knees bent, hands on his chest. The man is lying on his back holding her waist, his penis inside her vagina during riding. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, detailed penetration." },
 
-        { name: 'M', prompt: "Change the woman's pose to lying flat on her back, legs spread wide. She is receiving deep vaginal penetration from a man (only his penis and hips visible), thrusting inside her. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body unchanged. Background, lighting, shadows identical. Realistic photo style, ultra detailed." },
+        { name: '传教', prompt: "Change the woman's pose to lying flat on her back, legs spread wide. She is receiving deep vaginal penetration from a man (only his penis and hips visible), thrusting inside her. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body unchanged. Background, lighting, shadows identical. Realistic photo style, ultra detailed." },
 
-        { name: 'D', prompt: "Change the woman's pose to all fours in strict side profile, back arched, hips raised high, looking back at viewer. A man behind her is fucking her, penis fully inserted in her pussy. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic, raw photo." },
+        { name: '后入', prompt: "Change the woman's pose to all fours in strict side profile, back arched, hips raised high, looking back at viewer. A man behind her is fucking her, penis fully inserted in her pussy. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic, raw photo." },
 
-        { name: 'D2', prompt: "First-person POV from slightly angled rear-side: the woman on all fours (three-quarter view toward viewer), back arched, hips pushed back, head turned showing her face clearly. Only man's penis, lower abdomen, hands gripping her hips visible while thrusting into her vagina. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body unchanged. Background, lighting, shadows identical. Ultra detailed, realistic photo style." },
+        { name: '后入视', prompt: "First-person POV from slightly angled rear-side: the woman on all fours (three-quarter view toward viewer), back arched, hips pushed back, head turned showing her face clearly. Only man's penis, lower abdomen, hands gripping her hips visible while thrusting into her vagina. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body unchanged. Background, lighting, shadows identical. Ultra detailed, realistic photo style." },
 
-        { name: '互动', prompt: "Adjust the woman's pose to standing, body slightly turned, head tilted toward the man, legs apart, looking at viewer. A tall muscular man stands beside her; her hand firmly gripping and holding his erect penis. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic." },
+        { name: '互动握', prompt: "Adjust the woman's pose to standing, body slightly turned, head tilted toward the man, legs apart, looking at viewer. A tall muscular man stands beside her; her hand firmly gripping and holding his erect penis. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic." },
 
-        { name: '互动2', prompt: "Adjust the woman's pose to standing straight, legs slightly apart, head tilted exposing her ear, looking at viewer. A tall muscular man stands behind her, kissing and nibbling her earlobe, both hands squeezing her breasts over her top, his thick erect cock bulging in his pants. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical. Photorealistic, ultra detailed." },
+        { name: '互动吻', prompt: "Adjust the woman's pose to standing straight, legs slightly apart, head tilted exposing her ear, looking at viewer. A tall muscular man stands behind her, kissing and nibbling her earlobe, both hands squeezing her breasts over her top, his thick erect cock bulging in his pants. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical. Photorealistic, ultra detailed." },
 
-        { name: '互动3', prompt: "Adjust the woman's pose to kneeling, upper body straight, head tilted upward looking at viewer, mouth slightly open. A tall muscular man stands in front, his thick erect penis right next to her cheek; her left hand gently holding the base. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical." },
+        { name: '互动贴', prompt: "Adjust the woman's pose to kneeling, upper body straight, head tilted upward looking at viewer, mouth slightly open. A tall muscular man stands in front, his thick erect penis right next to her cheek; her left hand gently holding the base. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical." },
 
-        { name: '互动4', prompt: "Adjust the woman's pose to lying on her side on a bed, propped on elbow, head on hand, looking at viewer. A tall muscular man beside the bed, his thick erect penis resting on her cheek near her mouth; her hand cupping and holding it. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical." },
+        { name: '互动枕', prompt: "Adjust the woman's pose to lying on her side on a bed, propped on elbow, head on hand, looking at viewer. A tall muscular man beside the bed, his thick erect penis resting on her cheek near her mouth; her hand cupping and holding it. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical." },
 
-        { name: '互动5', prompt: "Adjust the woman's pose to kneeling, upper body upright, chest pushed forward. A tall muscular man stands in front, his thick erect penis rubbing against her breasts. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical. Photorealistic." },
+        { name: '互动乳', prompt: "Adjust the woman's pose to kneeling, upper body upright, chest pushed forward. A tall muscular man stands in front, his thick erect penis rubbing against her breasts. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical. Photorealistic." },
     
         { name: '躺开', prompt: "Completely remove all clothing from the woman, rendering her fully nude, lying flat on her back, legs spread extremely wide apart in an inviting M-shape or butterfly position, knees bent outward, feet flat or raised, pussy fully exposed and centered. {decorator} (perfect facial fidelity:1.5), (identical identity:1.5) It is absolutely critical to keep the exact same woman from the original image: face, expression, hairstyle, body proportions, skin texture, and pose unchanged. Background, lighting, shadows, and composition must be 100% identical. Photorealistic, raw photo, best quality, ultra detailed, sharp focus, natural skin, detailed pussy." },
 
@@ -67,29 +67,31 @@
     ],
     customPrompts: [],
     decorators: [
-        { name: '散', prompt: 'Scatter her panties, bra, tights, stockings and all other clothing items realistically on the ground around her body.' },
-        { name: 'cof', prompt: 'the woman has thick realistic cum on her face, glossy semen dripping from mouth and cheeks' },
-        { name: 'cob', prompt: 'the woman has thick realistic cum on her breasts and cleavage, glossy semen dripping' },
-        { name: 'cop', prompt: 'the woman has thick realistic cum on and inside her pussy, glossy semen dripping down thighs' },
-        { name: 'swe', prompt: 'the woman is covered in glistening sweat, shiny wet skin, beads of sweat rolling down body and face' },
-        { name: 'oil', prompt: "the woman's entire body is glistening with oil, extremely shiny and reflective skin" },
-        { name: 'tea', prompt: 'tears of pleasure streaming down her cheeks, ruined mascara, wet eyes' },
-        { name: 'bit', prompt: 'visible red bite marks and hickeys on neck, breasts, thighs and shoulders' },
-        { name: 'han', prompt: 'red handprints and fingerprints on her ass, breasts and waist' },
-        { name: 'col', prompt: 'wearing a tight black leather collar with a metal ring and short chain leash' },
-        { name: 'cla', prompt: 'silver nipple clamps with thin chains attached, pulling on her nipples' },
-        { name: 'vib', prompt: 'a thick pink vibrator deeply inserted in her pussy, visibly vibrating' },
-        { name: 'dld', prompt: 'a large realistic dildo inserted in her vagina, base visible' },
-        { name: 'plg', prompt: 'a shiny metal butt plug inserted in her ass, jewel base visible' },
-        { name: 'tor', prompt: 'black thigh-high stockings with large runs, tears and laddering' },
-        { name: 'mak', prompt: 'heavily smeared makeup, runny mascara, smeared lipstick from intense activity' },
-        { name: 'blu', prompt: 'intense deep blushing across face, neck and chest, aroused flush' },
-        { name: 'wet', prompt: 'extremely wet and glistening pussy, visible arousal fluids dripping' },
-        { name: 'squ', prompt: 'female ejaculation / squirting fluids spraying and dripping everywhere' },
-        { name: 'mil', prompt: 'milk leaking from her nipples, glossy white droplets on breasts' },
-        { name: 'har', prompt: 'light red whip marks and welts across her ass and back' },
-        { name: 'tat', prompt: 'temporary sexy tattoos or writing on her body: "cumslut", "property", heart symbols' }
+        { name: '散衣', prompt: 'Scatter her panties, bra, tights, stockings and all other clothing items realistically on the ground around her body.' },
+        { name: '颜射', prompt: 'the woman has thick realistic cum on her face, glossy semen dripping from mouth and cheeks' },
+        { name: '胸射', prompt: 'the woman has thick realistic cum on her breasts and cleavage, glossy semen dripping' },
+        { name: '内射', prompt: 'the woman has thick realistic cum on and inside her pussy, glossy semen dripping down thighs' },
+        { name: '汗', prompt: 'the woman is covered in glistening sweat, shiny wet skin, beads of sweat rolling down body and face' },
+        { name: '油', prompt: "the woman's entire body is glistening with oil, extremely shiny and reflective skin" },
+        { name: '泪', prompt: 'tears of pleasure streaming down her cheeks, ruined mascara, wet eyes' },
+        { name: '咬痕', prompt: 'visible red bite marks and hickeys on neck, breasts, thighs and shoulders' },
+        { name: '掌印', prompt: 'red handprints and fingerprints on her ass, breasts and waist' },
+        { name: '项圈', prompt: 'wearing a tight black leather collar with a metal ring and short chain leash' },
+        { name: '乳夹', prompt: 'silver nipple clamps with thin chains attached, pulling on her nipples' },
+        { name: '跳蛋', prompt: 'a thick pink vibrator deeply inserted in her pussy, visibly vibrating' },
+        { name: '假阳', prompt: 'a large realistic dildo inserted in her vagina, base visible' },
+        { name: '肛塞', prompt: 'a shiny metal butt plug inserted in her ass, jewel base visible' },
+        { name: '破袜', prompt: 'black thigh-high stockings with large runs, tears and laddering' },
+        { name: '花妆', prompt: 'heavily smeared makeup, runny mascara, smeared lipstick from intense activity' },
+        { name: '潮红', prompt: 'intense deep blushing across face, neck and chest, aroused flush' },
+        { name: '湿', prompt: 'extremely wet and glistening pussy, visible arousal fluids dripping' },
+        { name: '潮吹', prompt: 'female ejaculation / squirting fluids spraying and dripping everywhere' },
+        { name: '泌乳', prompt: 'milk leaking from her nipples, glossy white droplets on breasts' },
+        { name: '鞭痕', prompt: 'light red whip marks and welts across her ass and back' },
+        { name: '纹身', prompt: 'temporary sexy tattoos or writing on her body: "cumslut", "property", heart symbols' }
     ],
+    rowNames: ['裸俯拍', '裸仰拍', '裸侧跪', '裸正面', '裸跪仰', '裸坐低', '裸翘臀', '裸靠俯', '裸扭站'],
+
     row1Prompts: [
         { prompt: "Completely remove all clothing from the woman, rendering her fully nude, lying on her back from high top-down angle looking directly down. {decorator} (perfect facial fidelity:1.45) Pose open and inviting. Keep the exact same woman from the original image: face, hair, identity unchanged. Environment identical. Photorealistic, raw photo, ultra detailed, sharp focus." },
         { prompt: "Completely remove all clothing from the woman, rendering her fully nude, standing tall from dramatic low worm's-eye angle looking up. {decorator} (perfect facial fidelity:1.45) Pose powerful and confident. Keep the exact same woman: face and expression unchanged. Background and lighting identical. Photorealistic, raw photo." },
@@ -334,16 +336,17 @@
                 margin-bottom: 8px;
             }
             .mw-number-btn {
-                padding: 6px 4px;
+                padding: 4px 2px;
                 background: #fef3c7;
                 border: 1px solid #fcd34d;
                 border-radius: 4px;
                 cursor: pointer;
-                font-size: 12px;
+                font-size: 11px;
                 font-weight: 600;
                 color: #92400e;
                 transition: all 0.2s;
                 text-align: center;
+                line-height: 1.2;
             }
             .mw-number-btn:hover {
                 background: #f59e0b;
@@ -1221,7 +1224,8 @@
         for (let i = 0; i < 9; i++) {
             const row1 = config.row1Prompts[i] || { prompt: '' };
             const row2 = config.row2Prompts[i] || { prompt: '' };
-            numberGrid1Html += `<button class="mw-number-btn" data-index="${i}" data-prompt1="${encodeURIComponent(row1.prompt)}" data-prompt2="${encodeURIComponent(row2.prompt)}">${i + 1}</button>`;
+            const rowName = (config.rowNames && config.rowNames[i]) || (i + 1);
+            numberGrid1Html += `<button class="mw-number-btn" data-index="${i}" data-prompt1="${encodeURIComponent(row1.prompt)}" data-prompt2="${encodeURIComponent(row2.prompt)}">${rowName}</button>`;
         }
         numberGrid1Html += '</div>';
 
