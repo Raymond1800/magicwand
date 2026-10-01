@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magicwand - 魔法图片编辑
 // @namespace    https://magicwand.ai/
-// @version      1.1.0
+// @version      1.2.0
 // @description  AI图片编辑油猴脚本，支持预置提示词和自定义编辑
 // @author       Magicwand
 // @match        *://*/*
@@ -19,7 +19,7 @@
     'use strict';
 
     // 脚本版本（与 userscript 头部保持一致）
-    const SCRIPT_VERSION = '1.1.0';
+    const SCRIPT_VERSION = '1.2.0';
 
     // ComfyUI 默认工作流配置（Qwen-Image-2.1 图像编辑：B18 基础版 + 解锁 UNet + NSFW LoRA）
     // 该组合已在目标服务器上通过 /upload/image → /prompt → /history → /view 全链路实测
@@ -48,40 +48,40 @@
     apiKey: '',
     ...COMFY_DEFAULTS,
     enabled: true,
-    // 编辑提示词按 Qwen-Image-2.1 官方改写规范：短指令、只写要改的属性、一句保留、不用权重和质量词
+    // 编辑提示词：短指令；身份指向 <image1>，不重描五官；不用权重和质量词
     presetPrompts: [
-        { name: '全裸', prompt: '脱掉图中女性的上衣、下装和内衣，让身体完全裸露。{decorator}保持人物身份、姿态、背景和光线与原图一致。' },
-        { name: '绝顶颜', prompt: '只改变图中女性的表情：双眼上翻，舌头微微伸出，口水从嘴角和下巴滴落，脸颊潮红。{decorator}保持人物身份、服装、姿态、背景和光线与原图一致。' },
-        { name: '碎衣', prompt: '把图中女性的外衣改成大幅撕裂的状态：衣物拉开、破口很大、边缘毛糙，破口处露出皮肤。{decorator}保持人物身份、姿态、背景和光线与原图一致。' },
-        { name: '透视', prompt: '把图中女性的外衣改成极薄的半透明面料，衣褶和垂坠还在，里面的内衣和身体轮廓清楚可见。{decorator}保持人物身份、姿态、背景和光线与原图一致。' },
-        { name: '黑内衣', prompt: '把图中女性的整套服装换成黑色三点式内衣、黑色过膝长袜和吊袜带。{decorator}保持人物身份、姿态、背景和光线与原图一致。' },
-        { name: '红内衣', prompt: '把图中女性的整套服装换成红色三点式内衣、红色过膝长袜和吊袜带。{decorator}保持人物身份、姿态、背景和光线与原图一致。' },
-        { name: '口交', prompt: '改为男性第一人称视角。图中女性正在给勃起的阴茎做深喉口交，脸上有白色精液并往下滴。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { name: '跪口', prompt: '图中女性跪在一名站立男性身前，上身前倾，双手放在他的大腿上，给他勃起的阴茎口交。男性双手轻扶她的头。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { name: '跨腿口', prompt: '改为向下看的第一人称视角：图中女性跪在观看者分开的双腿之间，上身伏在腿上，双手撑着大腿，给勃起的阴茎口交。画面只出现男性的小腹、阴茎和手，焦点在女性的脸和上半身。{decorator}保持人物身份与原图为同一人。' },
-        { name: '骑乘', prompt: '图中女性跨坐在仰卧男性身上，面朝他，上身坐直，双膝弯曲，双手放在他胸口。男性躺着扶住她的腰，阴茎插入她的阴道。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { name: '传教', prompt: '图中女性平躺，双腿大幅分开。画面里只出现男性的阴茎和髋部，正在深入插入她的阴道。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { name: '后入', prompt: '图中女性呈严格侧身的四肢着地姿势，腰部下塌，臀部抬高，回头看向镜头。她身后的男性把阴茎完全插入她的阴道。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { name: '后入视', prompt: '改为从后侧略偏的第一人称视角：图中女性四肢着地，身体四分之三朝向镜头，腰部下塌，臀部后送，转头让脸清晰可见。画面只出现男性的阴茎、小腹和抓住她髋部的手，阴茎正在插入她的阴道。{decorator}保持人物身份与原图为同一人。' },
-        { name: '互动握', prompt: '图中女性站立，身体微侧，头转向身旁一名高大的肌肉男性，双腿分开，看向镜头。她的一只手握住他勃起的阴茎。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { name: '互动吻', prompt: '图中女性站直，双腿微开，头侧开露出耳朵，看向镜头。一名高大的肌肉男性站在她身后，亲吻并轻咬她的耳垂，双手隔着上衣揉她的胸，他勃起的阴茎把裤裆顶起。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { name: '互动贴', prompt: '图中女性跪着，上身挺直，仰头看向镜头，嘴微张。一名高大的肌肉男性站在她面前，勃起的阴茎贴在她的脸颊旁，她的左手握住根部。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { name: '互动枕', prompt: '图中女性侧躺在床上，用一只肘支撑，头枕在手上，看向镜头。床边一名高大的肌肉男性把勃起的阴茎贴在她嘴边的脸颊上，她用手托住。{decorator}保持人物身份与原图为同一人。' },
-        { name: '互动乳', prompt: '图中女性跪着，上身挺直，胸部向前。一名高大的肌肉男性站在她面前，用勃起的阴茎贴着她的胸部摩擦。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { name: '躺开', prompt: '脱掉图中女性的全部衣物。她平躺，双腿以M形大幅分开，膝盖向外弯曲，阴部完全露出并位于画面中央。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { name: '趴开', prompt: '脱掉图中女性的全部衣物。她面朝下，臀部高高抬起并正对镜头，双腿大幅分开，腰深陷，回头越过肩膀看向镜头。{decorator}保持人物身份、背景和光线与原图一致。' }
+        { name: '全裸', nude: true, prompt: '脱掉<image1>中女性的上衣、下装和内衣，让身体完全裸露。{decorator}保持<image1>中人物的面部结构、发型、身体比例、姿态、背景和光线不变。' },
+        { name: '绝顶颜', prompt: '只改变<image1>中女性的表情：双眼上翻，舌头微微伸出，口水从嘴角和下巴滴落，脸颊潮红。{decorator}保持<image1>中人物的面部结构、发型、身体比例、服装、姿态、背景和光线不变。' },
+        { name: '碎衣', prompt: '把<image1>中女性的外衣改成大幅撕裂的状态：衣物拉开、破口很大、边缘毛糙，破口处露出皮肤。{decorator}保持<image1>中人物的面部结构、发型、身体比例、姿态、背景和光线不变。' },
+        { name: '透视', prompt: '把<image1>中女性的外衣改成极薄的半透明面料，衣褶和垂坠还在，里面的内衣和身体轮廓清楚可见。{decorator}保持<image1>中人物的面部结构、发型、身体比例、姿态、背景和光线不变。' },
+        { name: '黑内衣', prompt: '把<image1>中女性的整套服装换成黑色三点式内衣、黑色过膝长袜和吊袜带。{decorator}保持<image1>中人物的面部结构、发型、身体比例、姿态、背景和光线不变。' },
+        { name: '红内衣', prompt: '把<image1>中女性的整套服装换成红色三点式内衣、红色过膝长袜和吊袜带。{decorator}保持<image1>中人物的面部结构、发型、身体比例、姿态、背景和光线不变。' },
+        { name: '口交', prompt: '改为男性第一人称视角。<image1>中女性正在给勃起的阴茎做深喉口交，脸上有白色精液并往下滴。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { name: '跪口', prompt: '<image1>中女性跪在一名站立男性身前，上身前倾，双手放在他的大腿上，给他勃起的阴茎口交。男性双手轻扶她的头。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { name: '跨腿口', prompt: '改为向下看的第一人称视角：<image1>中女性跪在观看者分开的双腿之间，上身伏在腿上，双手撑着大腿，给勃起的阴茎口交。画面只出现男性的小腹、阴茎和手，焦点在女性的脸和上半身。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '骑乘', prompt: '<image1>中女性跨坐在仰卧男性身上，面朝他，上身坐直，双膝弯曲，双手放在他胸口。男性躺着扶住她的腰，阴茎插入她的阴道。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { name: '传教', prompt: '<image1>中女性平躺，双腿大幅分开。画面里只出现男性的阴茎和髋部，正在深入插入她的阴道。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { name: '后入', prompt: '<image1>中女性呈严格侧身的四肢着地姿势，腰部下塌，臀部抬高，回头看向镜头。她身后的男性把阴茎完全插入她的阴道。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { name: '后入视', prompt: '改为从后侧略偏的第一人称视角：<image1>中女性四肢着地，身体四分之三朝向镜头，腰部下塌，臀部后送，转头让脸清晰可见。画面只出现男性的阴茎、小腹和抓住她髋部的手，阴茎正在插入她的阴道。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '互动握', prompt: '<image1>中女性站立，身体微侧，头转向身旁一名高大的肌肉男性，双腿分开，看向镜头。她的一只手握住他勃起的阴茎。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { name: '互动吻', prompt: '<image1>中女性站直，双腿微开，头侧开露出耳朵，看向镜头。一名高大的肌肉男性站在她身后，亲吻并轻咬她的耳垂，双手隔着上衣揉她的胸，他勃起的阴茎把裤裆顶起。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { name: '互动贴', prompt: '<image1>中女性跪着，上身挺直，仰头看向镜头，嘴微张。一名高大的肌肉男性站在她面前，勃起的阴茎贴在她的脸颊旁，她的左手握住根部。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { name: '互动枕', prompt: '<image1>中女性侧躺在床上，用一只肘支撑，头枕在手上，看向镜头。床边一名高大的肌肉男性把勃起的阴茎贴在她嘴边的脸颊上，她用手托住。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '互动乳', prompt: '<image1>中女性跪着，上身挺直，胸部向前。一名高大的肌肉男性站在她面前，用勃起的阴茎贴着她的胸部摩擦。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { name: '躺开', nude: true, prompt: '脱掉<image1>中女性的全部衣物。她平躺，双腿以M形大幅分开，膝盖向外弯曲，阴部完全露出并位于画面中央。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { name: '趴开', nude: true, prompt: '脱掉<image1>中女性的全部衣物。她面朝下，臀部高高抬起并正对镜头，双腿大幅分开，腰深陷，回头越过肩膀看向镜头。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' }
     ],
     testPrompts: [
-        { name: '互动足交', prompt: '图中女性仰躺在床上，上身微微支起，看向镜头。一名高大的肌肉男性跪在她脚前，她用两只光脚夹住并套弄他勃起的阴茎，脚趾扣在柱身上。{decorator}保持人物身份与原图为同一人。' },
-        { name: '互动69', prompt: '改为侧躺的69姿势：图中女性侧躺，一条腿高抬，含住男性勃起的阴茎。男性把脸埋在她两腿之间，舔她的阴部。{decorator}保持人物身份与原图为同一人。' },
-        { name: '互动坐脸', prompt: '图中女性跨坐在男性脸上，双膝分在他头的两侧，臀部压低，阴部贴住他的嘴，她低头看向镜头。男性双手抓住她的大腿。{decorator}保持人物身份与原图为同一人。' },
-        { name: '互动床边喉', prompt: '图中女性仰躺，头垂在床沿外面，给勃起的阴茎做深喉，喉咙微微鼓起。一名高大的肌肉男性站在床边，双手轻扶她的头。{decorator}保持人物身份与原图为同一人。' },
-        { name: '互动后指', prompt: '图中女性站立，背贴着一名高大肌肉男性的胸口。他从身后抱住她，一只手揉她的胸，另一只手伸到两腿之间插入她的阴道，并亲吻她的脖子。她反手握住他勃起的阴茎。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { name: '互动腿磨', prompt: '图中女性面朝男性坐在他腿上，双腿大幅分开。她用阴部磨蹭他勃起的阴茎，阴茎夹在她的大腿之间。她的手放在他肩上，他的手放在她的腰上。{decorator}保持人物身份与原图为同一人。' },
-        { name: '互动壁站', prompt: '图中女性站立前倾，双掌抵在竖直的墙面上，腰深陷，臀部后送。一名高大的肌肉男性从身后贴住她，一只手抓住她的髋，另一只手抓住她的肩，勃起的阴茎深入她的阴道。{decorator}保持人物身份与原图为同一人。' },
-        { name: '互动侧勺', prompt: '图中女性侧躺，上面那条腿微抬并弯曲。一名高大的肌肉男性紧贴在她身后，一只手臂环住她并握住她的胸，勃起的阴茎插入她的阴道。{decorator}保持人物身份与原图为同一人。' },
-        { name: '互动椅对', prompt: '图中女性跨坐在一名坐着的高大肌肉男性身上，面对面，双膝分在他髋部两侧。她的手放在他肩上，他的手抓住她的腰，阴茎完全插入她的阴道。{decorator}保持人物身份与原图为同一人。' },
-        { name: '互动乳口', prompt: '图中女性跪直，胸部前挺，用双乳夹住一根勃起的阴茎，同时舔并含住顶端。一名高大的肌肉男性站在她面前。{decorator}保持人物身份、背景和光线与原图一致。' }
+        { name: '互动足交', prompt: '<image1>中女性仰躺在床上，上身微微支起，看向镜头。一名高大的肌肉男性跪在她脚前，她用两只光脚夹住并套弄他勃起的阴茎，脚趾扣在柱身上。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '互动69', prompt: '改为侧躺的69姿势：<image1>中女性侧躺，一条腿高抬，含住男性勃起的阴茎。男性把脸埋在她两腿之间，舔她的阴部。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '互动坐脸', prompt: '<image1>中女性跨坐在男性脸上，双膝分在他头的两侧，臀部压低，阴部贴住他的嘴，她低头看向镜头。男性双手抓住她的大腿。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '互动床边喉', prompt: '<image1>中女性仰躺，头垂在床沿外面，给勃起的阴茎做深喉，喉咙微微鼓起。一名高大的肌肉男性站在床边，双手轻扶她的头。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '互动后指', prompt: '<image1>中女性站立，背贴着一名高大肌肉男性的胸口。他从身后抱住她，一只手揉她的胸，另一只手伸到两腿之间插入她的阴道，并亲吻她的脖子。她反手握住他勃起的阴茎。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { name: '互动腿磨', prompt: '<image1>中女性面朝男性坐在他腿上，双腿大幅分开。她用阴部磨蹭他勃起的阴茎，阴茎夹在她的大腿之间。她的手放在他肩上，他的手放在她的腰上。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '互动壁站', prompt: '<image1>中女性站立前倾，双掌抵在竖直的墙面上，腰深陷，臀部后送。一名高大的肌肉男性从身后贴住她，一只手抓住她的髋，另一只手抓住她的肩，勃起的阴茎深入她的阴道。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '互动侧勺', prompt: '<image1>中女性侧躺，上面那条腿微抬并弯曲。一名高大的肌肉男性紧贴在她身后，一只手臂环住她并握住她的胸，勃起的阴茎插入她的阴道。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '互动椅对', prompt: '<image1>中女性跨坐在一名坐着的高大肌肉男性身上，面对面，双膝分在他髋部两侧。她的手放在他肩上，他的手抓住她的腰，阴茎完全插入她的阴道。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '互动乳口', prompt: '<image1>中女性跪直，胸部前挺，用双乳夹住一根勃起的阴茎，同时舔并含住顶端。一名高大的肌肉男性站在她面前。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' }
     ],
     customPrompts: [],
     decorators: [
@@ -111,26 +111,26 @@
     rowNames: ['裸俯拍', '裸仰拍', '裸侧跪', '裸正面', '裸跪仰', '裸坐低', '裸翘臀', '裸靠俯', '裸扭站'],
 
     row1Prompts: [
-        { prompt: '脱掉图中女性的全部衣物。她仰躺，镜头从正上方俯拍。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '脱掉图中女性的全部衣物。她站直，镜头贴近地面向上仰拍。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '脱掉图中女性的全部衣物。她跪在地上，身体转成严格的正侧面，与镜头成90度。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '脱掉图中女性的全部衣物。她正面站立，面对镜头。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '脱掉图中女性的全部衣物。她跪在地上，镜头从高处往下拍，她抬头看向镜头。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '脱掉图中女性的全部衣物。她坐在高椅或桌沿上，镜头从很低的角度向上拍，双腿是画面主体。{decorator}保持人物身份与原图为同一人。' },
-        { prompt: '脱掉图中女性的全部衣物。她四肢着地，臀部抬高并正对镜头，回头越过肩膀看向镜头。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '脱掉图中女性的全部衣物。她呈四分之三侧面，上身前倾，靠在墙或栏杆上。{decorator}保持人物身份与原图为同一人。' },
-        { prompt: '脱掉图中女性的全部衣物。她站立，重心落在一只脚上，身体形成对立平衡，镜头略微倾斜。{decorator}保持人物身份、背景和光线与原图一致。' }
+        { nude: true, prompt: '脱掉<image1>中女性的全部衣物。她仰躺，镜头从正上方俯拍。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { nude: true, prompt: '脱掉<image1>中女性的全部衣物。她站直，镜头贴近地面向上仰拍。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { nude: true, prompt: '脱掉<image1>中女性的全部衣物。她跪在地上，身体转成严格的正侧面，与镜头成90度。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { nude: true, prompt: '脱掉<image1>中女性的全部衣物。她正面站立，面对镜头。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { nude: true, prompt: '脱掉<image1>中女性的全部衣物。她跪在地上，镜头从高处往下拍，她抬头看向镜头。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { nude: true, prompt: '脱掉<image1>中女性的全部衣物。她坐在高椅或桌沿上，镜头从很低的角度向上拍，双腿是画面主体。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { nude: true, prompt: '脱掉<image1>中女性的全部衣物。她四肢着地，臀部抬高并正对镜头，回头越过肩膀看向镜头。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { nude: true, prompt: '脱掉<image1>中女性的全部衣物。她呈四分之三侧面，上身前倾，靠在墙或栏杆上。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { nude: true, prompt: '脱掉<image1>中女性的全部衣物。她站立，重心落在一只脚上，身体形成对立平衡，镜头略微倾斜。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' }
     ],
     row2Prompts: [
-        { prompt: '把图中女性的姿势改为仰躺，镜头从正上方俯拍，服装保持原样。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '把图中女性的姿势改为站直，镜头贴近地面向上仰拍，服装保持原样。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '把图中女性的姿势改为跪在地上的严格正侧面，身体与镜头成90度，服装保持原样。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '把图中女性的姿势改为正面站立、面对镜头，服装保持原样。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '把图中女性的姿势改为跪在地上，镜头从高处往下拍，她抬头看向镜头，服装保持原样。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '把图中女性的姿势改为坐在高椅或桌沿上，镜头从很低的角度向上拍，双腿是画面主体，服装保持原样。{decorator}保持人物身份与原图为同一人。' },
-        { prompt: '把图中女性的姿势改为四肢着地，臀部抬高并正对镜头，回头越过肩膀看向镜头，服装保持原样。{decorator}保持人物身份、背景和光线与原图一致。' },
-        { prompt: '把图中女性的姿势改为四分之三侧面，上身前倾靠在墙或栏杆上，服装保持原样。{decorator}保持人物身份与原图为同一人。' },
-        { prompt: '把图中女性的姿势改为站立，重心落在一只脚上，镜头略微倾斜，服装保持原样。{decorator}保持人物身份、背景和光线与原图一致。' }
+        { prompt: '把<image1>中女性的姿势改为仰躺，镜头从正上方俯拍，服装保持原样。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { prompt: '把<image1>中女性的姿势改为站直，镜头贴近地面向上仰拍，服装保持原样。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { prompt: '把<image1>中女性的姿势改为跪在地上的严格正侧面，身体与镜头成90度，服装保持原样。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { prompt: '把<image1>中女性的姿势改为正面站立、面对镜头，服装保持原样。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { prompt: '把<image1>中女性的姿势改为跪在地上，镜头从高处往下拍，她抬头看向镜头，服装保持原样。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { prompt: '把<image1>中女性的姿势改为坐在高椅或桌沿上，镜头从很低的角度向上拍，双腿是画面主体，服装保持原样。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { prompt: '把<image1>中女性的姿势改为四肢着地，臀部抬高并正对镜头，回头越过肩膀看向镜头，服装保持原样。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' },
+        { prompt: '把<image1>中女性的姿势改为四分之三侧面，上身前倾靠在墙或栏杆上，服装保持原样。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { prompt: '把<image1>中女性的姿势改为站立，重心落在一只脚上，镜头略微倾斜，服装保持原样。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' }
     ]
 };
 
@@ -1405,7 +1405,7 @@
             const row1 = config.row1Prompts[i] || { prompt: '' };
             const row2 = config.row2Prompts[i] || { prompt: '' };
             const rowName = (config.rowNames && config.rowNames[i]) || (i + 1);
-            numberGrid1Html += `<button class="mw-number-btn" data-index="${i}" data-prompt1="${encodeURIComponent(row1.prompt)}" data-prompt2="${encodeURIComponent(row2.prompt)}">${rowName}</button>`;
+            numberGrid1Html += `<button class="mw-number-btn" data-index="${i}" data-nude1="${row1.nude ? '1' : '0'}" data-nude2="${row2.nude ? '1' : '0'}" data-prompt1="${encodeURIComponent(row1.prompt)}" data-prompt2="${encodeURIComponent(row2.prompt)}">${rowName}</button>`;
         }
         numberGrid1Html += '</div>';
 
@@ -1426,7 +1426,7 @@
         `;
 
         allPrompts.forEach((p, i) => {
-            html += `<button class="mw-preset-btn" data-prompt="${encodeURIComponent(p.prompt)}">${p.name}</button>`;
+            html += `<button class="mw-preset-btn" data-nude="${p.nude ? '1' : '0'}" data-prompt="${encodeURIComponent(p.prompt)}">${p.name}</button>`;
         });
         html += `<button class="mw-preset-btn" data-custom="true">自定义...</button></div>`;
 
@@ -1487,7 +1487,10 @@
                     const mergedPrompt1 = mergeDecoratorsWithPrompt(prompt1, selectedDecorators);
                     const mergedPrompt2 = mergeDecoratorsWithPrompt(prompt2, selectedDecorators);
                     selectedDecorators = [];
-                    sendDualEditRequest(img, mergedPrompt1, mergedPrompt2, panel, btn);
+                    sendDualEditRequest(img, mergedPrompt1, mergedPrompt2, panel, btn, {
+                        nude1: numBtn.dataset.nude1 === '1',
+                        nude2: numBtn.dataset.nude2 === '1'
+                    });
                 } else {
                     showError(panel, '该编号提示词未配置完整');
                 }
@@ -1507,7 +1510,7 @@
                     const prompt = decodeURIComponent(presetBtn.dataset.prompt);
                     const mergedPrompt = mergeDecoratorsWithPrompt(prompt, selectedDecorators);
                     selectedDecorators = [];
-                    sendEditRequest(img, mergedPrompt, panel, btn);
+                    sendEditRequest(img, mergedPrompt, panel, btn, { nude: presetBtn.dataset.nude === '1' });
                 }
             });
         });
@@ -1559,7 +1562,7 @@
     }
 
     // 发送双提示词编辑请求（并发生成两张图）
-    async function sendDualEditRequest(img, prompt1, prompt2, panel, btn) {
+    async function sendDualEditRequest(img, prompt1, prompt2, panel, btn, options = {}) {
         const config = state.config;
 
         if (!config.comfyUrl) {
@@ -1618,8 +1621,8 @@
                 originalSrc = img.src;
             }
             const [newImageBlob1, newImageBlob2] = await Promise.all([
-                callComfyEdit(config, imageBlob, prompt1, jobs[0].token, makeHooks(0)),
-                callComfyEdit(config, imageBlob, prompt2, jobs[1].token, makeHooks(1))
+                callComfyEdit(config, imageBlob, prompt1, jobs[0].token, makeHooks(0), { nude: !!options.nude1 }),
+                callComfyEdit(config, imageBlob, prompt2, jobs[1].token, makeHooks(1), { nude: !!options.nude2 })
             ]);
 
             const newImageUrl1 = URL.createObjectURL(newImageBlob1);
@@ -1871,7 +1874,7 @@
     }
 
     // 发送编辑请求
-    async function sendEditRequest(img, prompt, panel, btn) {
+    async function sendEditRequest(img, prompt, panel, btn, options = {}) {
         const config = state.config;
 
         if (!config.comfyUrl) {
@@ -1927,7 +1930,7 @@
                     if (job.token.cancelled) return;
                     updateProgress(formatProgressText(elapsed, queueRemaining), panel, processingOverlay, videoOverlay);
                 }
-            });
+            }, { nude: !!options.nude });
 
             const newImageUrl = URL.createObjectURL(newImageBlob);
             releaseActiveJob(imgKey);
@@ -2090,6 +2093,13 @@
 
     // ---------- 工作流拼装 ----------
 
+    // 名称里带这段的是 NSFW 图像编辑 LoRA，只在全裸提示词上加载
+    const EDIT_LORA_MARK = 'NSFW Image Edit';
+
+    function isEditLoraName(name) {
+        return String(name || '').toLowerCase().includes(EDIT_LORA_MARK.toLowerCase());
+    }
+
     // 每行一条：LoRA名称@强度
     function parseLoraList(loraList) {
         return String(loraList || '')
@@ -2109,7 +2119,48 @@
     }
 
     // Qwen-Image-2.1 图像编辑工作流（B18 基础版 + 解锁 UNet + LoRA 链）
-    function buildComfyWorkflow(config, imageName, prompt, seed) {
+    function lorasForRequest(config, nude) {
+        const loras = parseLoraList(config.loraList);
+        if (nude) return loras;
+        return loras.filter((lora) => !isEditLoraName(lora.name));
+    }
+
+    // 自定义工作流模板里如果写死了 Edit LoRA，非全裸请求也摘掉并把它的 model 输入接回上游
+    function stripEditLoraNodes(workflow) {
+        const removed = new Set();
+        Object.keys(workflow).forEach((id) => {
+            const node = workflow[id];
+            if (!node || node.class_type !== 'LoraLoaderModelOnly') return;
+            if (isEditLoraName(node.inputs && node.inputs.lora_name)) removed.add(String(id));
+        });
+        if (!removed.size) return workflow;
+        const resolve = (ref) => {
+            let current = ref;
+            const seen = new Set();
+            while (Array.isArray(current) && removed.has(String(current[0])) && !seen.has(String(current[0]))) {
+                seen.add(String(current[0]));
+                const node = workflow[current[0]];
+                current = node && node.inputs ? node.inputs.model : current;
+            }
+            return current;
+        };
+        Object.keys(workflow).forEach((id) => {
+            if (removed.has(id)) return;
+            const inputs = workflow[id] && workflow[id].inputs;
+            if (!inputs) return;
+            Object.keys(inputs).forEach((key) => {
+                if (Array.isArray(inputs[key]) && removed.has(String(inputs[key][0]))) {
+                    inputs[key] = resolve(inputs[key]);
+                }
+            });
+        });
+        removed.forEach((id) => {
+            delete workflow[id];
+        });
+        return workflow;
+    }
+
+    function buildComfyWorkflow(config, imageName, prompt, seed, loras) {
         const workflow = {
             '4': {
                 class_type: 'CLIPLoader',
@@ -2172,7 +2223,7 @@
 
         // LoRA 链：UNETLoader → LoRA1 → LoRA2 → ... → ModelAttentionBackend → KSampler
         let modelRef = ['5', 0];
-        parseLoraList(config.loraList).forEach((lora, index) => {
+        (loras || parseLoraList(config.loraList)).forEach((lora, index) => {
             const nodeId = `lora_${index}`;
             workflow[nodeId] = {
                 class_type: 'LoraLoaderModelOnly',
@@ -2232,12 +2283,17 @@
         }
     }
 
-    function buildWorkflowForRequest(config, imageName, prompt, seed) {
+    function buildWorkflowForRequest(config, imageName, prompt, seed, options = {}) {
+        const nude = !!options.nude;
+        const loras = lorasForRequest(config, nude);
+        if (!nude && parseLoraList(config.loraList).length !== loras.length) {
+            console.log('[Magicwand] 非全裸提示词，不加载 NSFW Image Edit LoRA');
+        }
         const template = (config.workflowTemplate || '').trim();
         if (!template) {
-            return buildComfyWorkflow(config, imageName, prompt, seed);
+            return buildComfyWorkflow(config, imageName, prompt, seed, loras);
         }
-        return renderWorkflowTemplate(template, {
+        const workflow = renderWorkflowTemplate(template, {
             IMAGE: imageName,
             PROMPT: prompt,
             SEED: seed,
@@ -2250,6 +2306,7 @@
             VAE: config.vaeName,
             FILENAME_PREFIX: 'magicwand'
         });
+        return nude ? workflow : stripEditLoraNodes(workflow);
     }
 
     // ---------- 客户端预缩放（只影响上传体积，最终尺寸仍由工作流决定） ----------
@@ -2533,7 +2590,7 @@
 
     // ---------- 对外入口：一次完整的图片编辑 ----------
 
-    async function callComfyEdit(config, imageBlob, prompt, token, hooks = {}) {
+    async function callComfyEdit(config, imageBlob, prompt, token, hooks = {}, options = {}) {
         const uploadBlob = await maybeDownscaleBlob(imageBlob, config.megapixels);
         if (token && token.cancelled) throw createCancelledError();
 
@@ -2541,7 +2598,7 @@
         if (token && token.cancelled) throw createCancelledError();
 
         const seed = config.seedMode === 'fixed' ? Math.round(config.fixedSeed) : randomSeed();
-        const workflow = buildWorkflowForRequest(config, imageName, prompt, seed);
+        const workflow = buildWorkflowForRequest(config, imageName, prompt, seed, options);
         const promptId = await queuePrompt(config, workflow);
 
         if (typeof hooks.onQueued === 'function') {
@@ -2845,7 +2902,7 @@
                 <div class="mw-settings-group">
                     <label class="mw-settings-label">LoRA 列表（每行一条：名称@强度）</label>
                     <textarea class="mw-settings-textarea mw-lora-list"></textarea>
-                    <div class="mw-settings-hint">按顺序串联后接入 ModelAttentionBackend；留空则不加载 LoRA</div>
+                    <div class="mw-settings-hint">按顺序串联后接入 ModelAttentionBackend。名称里带 NSFW Image Edit 的 LoRA 只在全裸提示词上加载</div>
                 </div>
 
                 <div class="mw-settings-section">生成参数</div>
