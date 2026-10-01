@@ -65,6 +65,18 @@
         { name: '趴开', prompt: "Completely remove all clothing from the woman, rendering her fully nude, in prone position with hips raised high and ass aimed directly at the camera (face-down ass-up), legs spread extremely wide apart, back deeply arched, knees apart for balance, looking back over her shoulder seductively at the viewer. {decorator} (perfect facial fidelity:1.5), (identical identity:1.5) It is absolutely critical to keep the exact same woman from the original image: face, expression, hairstyle, body proportions, skin texture unchanged. Background, lighting, shadows, and composition must be 100% identical. Photorealistic, raw photo, best quality, ultra detailed, sharp focus, detailed ass and pussy from behind." }
     
     ],
+    testPrompts: [
+        { name: '互动足交', prompt: "Adjust the woman's pose to lying on her back on a bed, upper body slightly propped up looking at viewer. A tall muscular man is kneeling in front of her; she is using both her bare feet to grip and stroke his thick erect penis in a sensual footjob, toes curled around the shaft. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, ultra detailed feet and skin." },
+        { name: '互动69', prompt: "Change to a side-lying 69 position: the woman is on her side, one leg raised high. She is performing oral sex on the man's erect penis while he buries his face between her legs licking her pussy. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, detailed mutual oral." },
+        { name: '互动坐脸', prompt: "Adjust the woman's pose to straddling the man's face in a facesitting position, knees on either side of his head, hips lowered, pussy pressed against his mouth while she looks down at viewer with pleasure. The man's hands gripping her thighs or ass. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, ultra detailed." },
+        { name: '互动床边喉', prompt: "The woman is lying on her back with her head hanging off the edge of the bed, performing a deepthroat blowjob on an erect penis, throat bulging slightly. A tall muscular man stands at the edge of the bed holding her head gently. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic, ultra detailed saliva." },
+        { name: '互动后指', prompt: "Adjust the woman's pose to standing, back pressed against a tall muscular man's chest. He is embracing her from behind, one hand squeezing her breast under/over clothes, the other hand between her legs fingering her pussy deeply, while kissing her neck. Her hand reaching back to hold his erect cock. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman unchanged. Background, lighting, shadows identical. Photorealistic." },
+        { name: '互动腿磨', prompt: "The woman is sitting on the man's lap facing him, legs spread wide straddling, grinding her pussy against his erect penis (hotdogging between her thighs). Her hands on his shoulders, his hands on her waist/ass. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical." },
+        { name: '互动壁站', prompt: "Adjust the woman's pose to standing and leaning forward, both palms pressed flat against a wall or vertical surface, back deeply arched, hips pushed back. A tall muscular man presses against her from behind, one hand on her hip, the other gripping her shoulder or hair, thrusting his erect penis deep into her pussy in standing doggy style. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic, raw photo." },
+        { name: '互动侧勺', prompt: "Change the woman's pose to lying on her side in spooning position, top leg slightly raised and bent. A tall muscular man lies tightly behind her, one arm wrapped around her body holding her breast, his erect penis inserted into her vagina for slow deep thrusting. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image: face, expression, hairstyle, body proportions unchanged. Background, lighting, shadows identical. Photorealistic, raw photo." },
+        { name: '互动椅对', prompt: "Adjust the woman's pose to straddling a sitting tall muscular man face-to-face on a chair, knees on either side of his hips. Her hands on his shoulders or chest, his hands gripping her waist/ass, penis fully inside her vagina. {decorator} (perfect facial fidelity:1.5) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical. Photorealistic, detailed penetration." },
+        { name: '互动乳口', prompt: "Adjust the woman's pose to kneeling upright, chest pushed out, performing a titjob with her breasts squeezing a thick erect penis while simultaneously licking and sucking the tip. A tall muscular man stands in front of her. {decorator} (perfect facial fidelity:1.45) Keep the exact same woman from the original image unchanged. Background, lighting, shadows identical. Photorealistic, raw photo, ultra detailed." }
+    ],
     customPrompts: [],
     decorators: [
         { name: '散衣', prompt: 'Scatter her panties, bra, tights, stockings and all other clothing items realistically on the ground around her body.' },
@@ -294,6 +306,27 @@
                 background: #6366f1;
                 color: white;
                 border-color: #6366f1;
+            }
+            .mw-test-grid {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-bottom: 10px;
+            }
+            .mw-test-btn {
+                padding: 4px 8px;
+                background: #d1fae5;
+                border: 1px solid #6ee7b7;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 11px;
+                color: #065f46;
+                transition: all 0.2s;
+            }
+            .mw-test-btn:hover {
+                background: #10b981;
+                color: white;
+                border-color: #059669;
             }
             .mw-decorator-row {
                 display: flex;
@@ -1249,6 +1282,16 @@
             html += `<button class="mw-preset-btn" data-prompt="${encodeURIComponent(p.prompt)}">${p.name}</button>`;
         });
         html += `<button class="mw-preset-btn" data-custom="true">自定义...</button></div>`;
+
+        const testPrompts = config.testPrompts || [];
+        if (testPrompts.length > 0) {
+            html += `<div class="mw-test-grid">`;
+            testPrompts.forEach((p) => {
+                html += `<button class="mw-test-btn" data-prompt="${encodeURIComponent(p.prompt)}">${p.name}</button>`;
+            });
+            html += `</div>`;
+        }
+
         html += `
             <div class="mw-input-area">
                 <input type="text" class="mw-input" placeholder="输入编辑指令...">
@@ -1266,6 +1309,7 @@
         const sendBtn = panel.querySelector('.mw-send-btn');
         const cancelBtn = panel.querySelector('.mw-cancel-btn');
         const presetBtns = panel.querySelectorAll('.mw-preset-btn');
+        const testBtns = panel.querySelectorAll('.mw-test-btn');
         const numberBtns = panel.querySelectorAll('.mw-number-btn');
         const decoratorBtns = panel.querySelectorAll('.mw-decorator-btn');
 
@@ -1314,6 +1358,18 @@
                     selectedDecorators = [];
                     sendEditRequest(img, mergedPrompt, panel, btn);
                 }
+            });
+        });
+
+        // 测试按钮点击
+        testBtns.forEach(testBtn => {
+            testBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const prompt = decodeURIComponent(testBtn.dataset.prompt);
+                const mergedPrompt = mergeDecoratorsWithPrompt(prompt, selectedDecorators);
+                selectedDecorators = [];
+                sendEditRequest(img, mergedPrompt, panel, btn);
             });
         });
 
