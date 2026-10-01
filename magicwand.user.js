@@ -346,29 +346,44 @@
                 box-shadow: 0 10px 40px rgba(0,0,0,0.2);
                 padding: 12px;
                 z-index: 10000;
-                min-width: 240px;
+                width: min(420px, calc(100vw - 20px));
+                max-height: calc(100vh - 20px);
+                overflow-y: auto;
+                box-sizing: border-box;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }
             .mw-panel-title {
                 font-size: 13px;
                 font-weight: 600;
                 color: #333;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
+            }
+            .mw-section-label {
+                font-size: 11px;
+                font-weight: 600;
+                color: #6b7280;
+                letter-spacing: 0.04em;
+                margin: 8px 0 4px;
             }
             .mw-preset-grid {
-                display: flex;
-                flex-wrap: wrap;
+                display: grid;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
                 gap: 4px;
-                margin-bottom: 10px;
             }
             .mw-preset-btn {
-                padding: 4px 8px;
+                min-width: 0;
+                padding: 5px 2px;
                 background: #f3f4f6;
                 border: 1px solid #e5e7eb;
                 border-radius: 4px;
                 cursor: pointer;
                 font-size: 11px;
+                line-height: 1.2;
                 color: #374151;
+                text-align: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
                 transition: all 0.2s;
             }
             .mw-preset-btn:hover {
@@ -376,44 +391,32 @@
                 color: white;
                 border-color: #6366f1;
             }
-            .mw-test-grid {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 4px;
-                margin-bottom: 10px;
-            }
-            .mw-test-btn {
-                padding: 4px 8px;
-                background: #d1fae5;
-                border: 1px solid #6ee7b7;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 11px;
-                color: #065f46;
-                transition: all 0.2s;
-            }
-            .mw-test-btn:hover {
-                background: #10b981;
-                color: white;
-                border-color: #059669;
-            }
             .mw-decorator-row {
                 display: flex;
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
                 align-items: center;
                 gap: 4px;
-                margin-bottom: 10px;
-                padding: 6px 8px;
+                margin-bottom: 2px;
+                padding: 4px 6px;
                 background: #f0f9ff;
                 border-radius: 6px;
+                overflow-x: auto;
+                scrollbar-width: thin;
             }
             .mw-decorator-label {
+                position: sticky;
+                left: 0;
+                z-index: 1;
+                flex: 0 0 auto;
+                padding-right: 2px;
+                background: #f0f9ff;
                 font-size: 11px;
                 color: #0369a1;
                 font-weight: 500;
-                margin-right: 4px;
             }
             .mw-decorator-btn {
+                flex: 0 0 auto;
+                white-space: nowrap;
                 padding: 3px 8px;
                 background: white;
                 border: 1px solid #bae6fd;
@@ -433,12 +436,13 @@
             }
             .mw-number-grid {
                 display: grid;
-                grid-template-columns: repeat(9, 1fr);
+                grid-template-columns: repeat(9, minmax(0, 1fr));
                 gap: 4px;
-                margin-bottom: 8px;
+                overflow-x: auto;
             }
             .mw-number-btn {
-                padding: 4px 2px;
+                min-width: 0;
+                padding: 4px 0;
                 background: #fef3c7;
                 border: 1px solid #fcd34d;
                 border-radius: 4px;
@@ -449,11 +453,28 @@
                 transition: all 0.2s;
                 text-align: center;
                 line-height: 1.2;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .mw-number-btn:hover {
                 background: #f59e0b;
                 color: white;
                 border-color: #d97706;
+            }
+            @media (max-width: 460px) {
+                .mw-number-btn {
+                    font-size: 10px;
+                    padding: 4px 0;
+                }
+            }
+            @media (max-width: 339px) {
+                .mw-number-grid {
+                    grid-template-columns: repeat(5, minmax(0, 1fr));
+                }
+                .mw-preset-grid {
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                }
             }
             .mw-input-area {
                 display: none;
@@ -805,7 +826,7 @@
             .mw-settings-row .mw-settings-group {
                 flex: 1;
             }
-            .mw-test-btn {
+            .mw-settings-panel .mw-test-btn {
                 width: 100%;
                 padding: 10px 12px;
                 background: #eef2ff;
@@ -816,7 +837,7 @@
                 cursor: pointer;
                 margin-top: 10px;
             }
-            .mw-test-btn:hover {
+            .mw-settings-panel .mw-test-btn:hover {
                 background: #e0e7ff;
             }
             .mw-test-status {
@@ -1397,7 +1418,6 @@
         const isVideoTarget = isVideoElement(img);
 
         const config = state.config;
-        const allPrompts = [...config.presetPrompts, ...config.customPrompts];
         const allDecorators = [...(config.decorators || []), ...(config.customDecorators || [])];
 
         let numberGrid1Html = '<div class="mw-number-grid">';
@@ -1411,30 +1431,46 @@
 
         let decoratorHtml = '';
         if (allDecorators.length > 0) {
-            decoratorHtml = '<div class="mw-decorator-row"><span class="mw-decorator-label">装饰:</span>';
-            allDecorators.forEach((d, i) => {
+            decoratorHtml = '<div class="mw-decorator-row"><span class="mw-decorator-label">装饰</span>';
+            allDecorators.forEach((d) => {
                 decoratorHtml += `<button class="mw-decorator-btn" data-decorator="${encodeURIComponent(d.prompt)}">${d.name}</button>`;
             });
             decoratorHtml += '</div>';
         }
 
+        // 内置名以「互动」开头的预制并入互动区；自定义提示词留在编辑区
+        const editPrompts = [];
+        const interactionPrompts = [];
+        config.presetPrompts.forEach((p) => {
+            if (String(p.name || '').startsWith('互动')) {
+                interactionPrompts.push(p);
+            } else {
+                editPrompts.push(p);
+            }
+        });
+        config.customPrompts.forEach((p) => editPrompts.push(p));
+        (config.testPrompts || []).forEach((p) => interactionPrompts.push(p));
+
+        const promptButtonHtml = (p) => `<button class="mw-preset-btn" data-nude="${p.nude ? '1' : '0'}" data-prompt="${encodeURIComponent(p.prompt)}">${p.name}</button>`;
+
         let html = `
             <div class="mw-panel-title">AI ${isVideoTarget ? '暂停帧' : '图片'}编辑</div>
-            ${numberGrid1Html}
             ${decoratorHtml}
+            <div class="mw-section-label">姿势</div>
+            ${numberGrid1Html}
+            <div class="mw-section-label">编辑</div>
             <div class="mw-preset-grid">
         `;
 
-        allPrompts.forEach((p, i) => {
-            html += `<button class="mw-preset-btn" data-nude="${p.nude ? '1' : '0'}" data-prompt="${encodeURIComponent(p.prompt)}">${p.name}</button>`;
+        editPrompts.forEach((p) => {
+            html += promptButtonHtml(p);
         });
         html += `<button class="mw-preset-btn" data-custom="true">自定义...</button></div>`;
 
-        const testPrompts = config.testPrompts || [];
-        if (testPrompts.length > 0) {
-            html += `<div class="mw-test-grid">`;
-            testPrompts.forEach((p) => {
-                html += `<button class="mw-test-btn" data-prompt="${encodeURIComponent(p.prompt)}">${p.name}</button>`;
+        if (interactionPrompts.length > 0) {
+            html += `<div class="mw-section-label">互动</div><div class="mw-preset-grid">`;
+            interactionPrompts.forEach((p) => {
+                html += promptButtonHtml(p);
             });
             html += `</div>`;
         }
@@ -1456,7 +1492,6 @@
         const sendBtn = panel.querySelector('.mw-send-btn');
         const cancelBtn = panel.querySelector('.mw-cancel-btn');
         const presetBtns = panel.querySelectorAll('.mw-preset-btn');
-        const testBtns = panel.querySelectorAll('.mw-test-btn');
         const numberBtns = panel.querySelectorAll('.mw-number-btn');
         const decoratorBtns = panel.querySelectorAll('.mw-decorator-btn');
 
@@ -1512,18 +1547,6 @@
                     selectedDecorators = [];
                     sendEditRequest(img, mergedPrompt, panel, btn, { nude: presetBtn.dataset.nude === '1' });
                 }
-            });
-        });
-
-        // 测试按钮点击
-        testBtns.forEach(testBtn => {
-            testBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const prompt = decodeURIComponent(testBtn.dataset.prompt);
-                const mergedPrompt = mergeDecoratorsWithPrompt(prompt, selectedDecorators);
-                selectedDecorators = [];
-                sendEditRequest(img, mergedPrompt, panel, btn);
             });
         });
 
