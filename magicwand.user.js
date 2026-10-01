@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magicwand - 魔法图片编辑
 // @namespace    https://magicwand.ai/
-// @version      1.0.11
+// @version      1.1.0
 // @description  AI图片编辑油猴脚本，支持预置提示词和自定义编辑
 // @author       Magicwand
 // @match        *://*/*
@@ -18,10 +18,35 @@
 (function() {
     'use strict';
 
+    // 脚本版本（与 userscript 头部保持一致）
+    const SCRIPT_VERSION = '1.1.0';
+
+    // ComfyUI 默认工作流配置（Qwen-Image-2.1 图像编辑：B18 基础版 + 解锁 UNet + NSFW LoRA）
+    // 该组合已在目标服务器上通过 /upload/image → /prompt → /history → /view 全链路实测
+    const COMFY_DEFAULTS = {
+        unetName: 'qwen/REDQW21-UNLOCKED-v1-BF16-ComfyMCP-builtwithqwen.safetensors',
+        clipName: 'qwen3vl_8b_int8_convrot.safetensors',
+        clipType: 'qwen_image',
+        vaeName: 'qwen_image_2.1_vae_bf16.safetensors',
+        loraList: 'qwen/Qwen-Image-2.1 NSFW Image EditV2.safetensors@1.0\nqwen/Qwen-Image-2.1 NSFW Image EditV2.safetensors@0.8',
+        steps: 25,               // Qwen-Image-2.1 参考默认步数
+        cfg: 1,                  // 固定为 1（负向分支被忽略）
+        samplerName: 'euler',
+        scheduler: 'simple',
+        refResolution: 1024,     // 参考图喂给文本编码器的分辨率（不影响出图尺寸）
+        megapixels: 1.5,         // 出图像素预算，按原图比例缩放
+        seedMode: 'random',      // 'random' | 'fixed'
+        fixedSeed: 0,
+        timeout: 300,            // 单张总超时（秒），排队繁忙时需要
+        pollInterval: 1.5,       // 轮询 /history 间隔（秒）
+        workflowTemplate: ''     // 非空时整份覆盖结构化配置（支持 %IMAGE% %PROMPT% %SEED% 等占位符）
+    };
+
     // 配置默认值
     const DEFAULT_CONFIG = {
-    apiUrl: '',
+    comfyUrl: '',
     apiKey: '',
+    ...COMFY_DEFAULTS,
     enabled: true,
     presetPrompts: [
         { name: '全裸', prompt: "Completely remove all clothing from the woman, rendering her fully nude. {decorator} (perfect facial fidelity:1.45), (identical identity:1.45) It is absolutely critical to keep the exact same woman from the original image: face, expression, hairstyle, body proportions, skin texture, and pose unchanged. Background, lighting, shadows, and composition must be 100% identical. Photorealistic, raw photo, best quality, ultra detailed, sharp focus, natural skin." },
@@ -140,44 +165,102 @@
         };
     }
 
+    // 旧版使用自建 MCP 的 /generate 接口，这里去掉接口路径，迁移为 ComfyUI 服务根地址
+    let legacyUrlMigrated = false;
+
+    function migrateLegacyConfig(config, savedConfig) {
+        const savedUrl = typeof savedConfig.apiUrl === 'string' ? savedConfig.apiUrl.trim() : '';
+        if (!config.comfyUrl && savedUrl) {
+            config.comfyUrl = savedUrl.replace(/\/+generate\/?$/i, '').replace(/\/+$/, '');
+            legacyUrlMigrated = true;
+        }
+        return config;
+    }
+
+    function clampNumber(value, fallback, min, max) {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return fallback;
+        return Math.min(max, Math.max(min, num));
+    }
+
     // 获取配置
     function getConfig() {
         const saved = GM_getValue('magicwand_config', null);
+        let savedConfig = {};
         if (saved) {
             try {
-                const savedConfig = JSON.parse(saved);
-                const config = { ...buildDefaultConfig(), ...savedConfig };
-                config.presetPrompts = getDefaultPresetPrompts();
-                if (!Array.isArray(config.customPrompts)) {
-                    config.customPrompts = [];
-                }
-                if (!Array.isArray(config.customDecorators)) {
-                    config.customDecorators = [];
-                }
-                return config;
+                savedConfig = JSON.parse(saved) || {};
             } catch (e) {
-                return buildDefaultConfig();
+                savedConfig = {};
             }
         }
-        return buildDefaultConfig();
+
+        const config = { ...buildDefaultConfig(), ...savedConfig };
+        config.presetPrompts = getDefaultPresetPrompts();
+        if (!Array.isArray(config.customPrompts)) {
+            config.customPrompts = [];
+        }
+        if (!Array.isArray(config.customDecorators)) {
+            config.customDecorators = [];
+        }
+
+        // 数值字段兜底，避免手工改坏配置导致 /prompt 校验失败
+        config.steps = Math.round(clampNumber(config.steps, COMFY_DEFAULTS.steps, 1, 200));
+        config.cfg = clampNumber(config.cfg, COMFY_DEFAULTS.cfg, 0.1, 20);
+        config.refResolution = Math.round(clampNumber(config.refResolution, COMFY_DEFAULTS.refResolution, 0, 4096));
+        config.megapixels = clampNumber(config.megapixels, COMFY_DEFAULTS.megapixels, 0.1, 16);
+        config.fixedSeed = Math.round(clampNumber(config.fixedSeed, COMFY_DEFAULTS.fixedSeed, 0, Number.MAX_SAFE_INTEGER));
+        config.timeout = Math.round(clampNumber(config.timeout, COMFY_DEFAULTS.timeout, 10, 3600));
+        config.pollInterval = clampNumber(config.pollInterval, COMFY_DEFAULTS.pollInterval, 0.5, 10);
+        config.seedMode = config.seedMode === 'fixed' ? 'fixed' : 'random';
+        if (typeof config.comfyUrl !== 'string') config.comfyUrl = '';
+        if (typeof config.workflowTemplate !== 'string') config.workflowTemplate = '';
+        config.comfyUrl = config.comfyUrl.trim().replace(/\/+$/, '');
+
+        return migrateLegacyConfig(config, savedConfig);
     }
 
     // 保存配置
     function saveConfig(config) {
         const configToSave = {
-            apiUrl: typeof config.apiUrl === 'string' ? config.apiUrl : '',
+            comfyUrl: typeof config.comfyUrl === 'string' ? config.comfyUrl.trim().replace(/\/+$/, '') : '',
             apiKey: typeof config.apiKey === 'string' ? config.apiKey : '',
+            unetName: typeof config.unetName === 'string' ? config.unetName.trim() : COMFY_DEFAULTS.unetName,
+            clipName: typeof config.clipName === 'string' ? config.clipName.trim() : COMFY_DEFAULTS.clipName,
+            clipType: typeof config.clipType === 'string' ? config.clipType.trim() : COMFY_DEFAULTS.clipType,
+            vaeName: typeof config.vaeName === 'string' ? config.vaeName.trim() : COMFY_DEFAULTS.vaeName,
+            loraList: typeof config.loraList === 'string' ? config.loraList : COMFY_DEFAULTS.loraList,
+            steps: Math.round(clampNumber(config.steps, COMFY_DEFAULTS.steps, 1, 200)),
+            cfg: clampNumber(config.cfg, COMFY_DEFAULTS.cfg, 0.1, 20),
+            samplerName: typeof config.samplerName === 'string' && config.samplerName.trim() ? config.samplerName.trim() : COMFY_DEFAULTS.samplerName,
+            scheduler: typeof config.scheduler === 'string' && config.scheduler.trim() ? config.scheduler.trim() : COMFY_DEFAULTS.scheduler,
+            refResolution: Math.round(clampNumber(config.refResolution, COMFY_DEFAULTS.refResolution, 0, 4096)),
+            megapixels: clampNumber(config.megapixels, COMFY_DEFAULTS.megapixels, 0.1, 16),
+            seedMode: config.seedMode === 'fixed' ? 'fixed' : 'random',
+            fixedSeed: Math.round(clampNumber(config.fixedSeed, COMFY_DEFAULTS.fixedSeed, 0, Number.MAX_SAFE_INTEGER)),
+            timeout: Math.round(clampNumber(config.timeout, COMFY_DEFAULTS.timeout, 10, 3600)),
+            pollInterval: clampNumber(config.pollInterval, COMFY_DEFAULTS.pollInterval, 0.5, 10),
+            workflowTemplate: typeof config.workflowTemplate === 'string' ? config.workflowTemplate : '',
             enabled: typeof config.enabled === 'boolean' ? config.enabled : true,
             customPrompts: Array.isArray(config.customPrompts) ? config.customPrompts : [],
             customDecorators: Array.isArray(config.customDecorators) ? config.customDecorators : []
         };
         GM_setValue('magicwand_config', JSON.stringify(configToSave));
+        // 返回一份与内存结构一致的配置，避免调用方再读一次存储
+        return {
+            ...buildDefaultConfig(),
+            ...configToSave,
+            presetPrompts: getDefaultPresetPrompts(),
+            customPrompts: configToSave.customPrompts,
+            customDecorators: configToSave.customDecorators
+        };
     }
 
     // 全局状态
     const state = {
         config: getConfig(),
         processingImages: new Set(),
+        activeJobs: new Map(),
         pinterestFloatBtn: null,
         pinterestTargetImg: null,
         pinterestHideTimer: null,
@@ -441,11 +524,25 @@
             /* 加载状态 */
             .mw-loading {
                 display: flex;
+                flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 gap: 8px;
                 padding: 20px;
                 color: #6b7280;
+            }
+            .mw-loading-cancel {
+                margin-top: 4px;
+                padding: 6px 12px;
+                background: #f3f4f6;
+                color: #374151;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                cursor: pointer;
+            }
+            .mw-loading-cancel:hover {
+                background: #e5e7eb;
             }
             .mw-spinner {
                 width: 20px;
@@ -689,6 +786,66 @@
                 border-radius: 8px;
                 font-size: 14px;
                 cursor: pointer;
+            }
+            .mw-settings-section {
+                font-size: 13px;
+                font-weight: 600;
+                color: #111827;
+                margin: 24px 0 12px;
+                padding-top: 12px;
+                border-top: 1px solid #f3f4f6;
+            }
+            .mw-settings-textarea {
+                width: 100%;
+                min-height: 84px;
+                padding: 10px 12px;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                font-size: 12px;
+                line-height: 1.5;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                box-sizing: border-box;
+                outline: none;
+                resize: vertical;
+            }
+            .mw-settings-textarea:focus {
+                border-color: #6366f1;
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            }
+            .mw-settings-row {
+                display: flex;
+                gap: 10px;
+            }
+            .mw-settings-row .mw-settings-group {
+                flex: 1;
+            }
+            .mw-test-btn {
+                width: 100%;
+                padding: 10px 12px;
+                background: #eef2ff;
+                color: #4338ca;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                font-size: 13px;
+                cursor: pointer;
+                margin-top: 10px;
+            }
+            .mw-test-btn:hover {
+                background: #e0e7ff;
+            }
+            .mw-test-status {
+                font-size: 12px;
+                margin-top: 6px;
+                word-break: break-all;
+            }
+            .mw-test-status.ok {
+                color: #059669;
+            }
+            .mw-test-status.err {
+                color: #dc2626;
+            }
+            .mw-test-status.pending {
+                color: #6b7280;
             }
 
             /* 图片容器 */
@@ -1234,6 +1391,8 @@
     // 当前活动的面板
     let activePanel = null;
     let selectedDecorators = [];
+    // 面板外部点击监听用捕获阶段，避免按钮处理器先改 DOM 导致误判为「面板外部」
+    const OUTSIDE_CLICK_OPTIONS = { capture: true };
 
     function mergeDecoratorsWithPrompt(prompt, decorators) {
         if (!decorators || decorators.length === 0) {
@@ -1331,7 +1490,9 @@
         });
 
         numberBtns.forEach(numBtn => {
-            numBtn.addEventListener('click', () => {
+            numBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const prompt1 = decodeURIComponent(numBtn.dataset.prompt1 || '');
                 const prompt2 = decodeURIComponent(numBtn.dataset.prompt2 || '');
                 if (prompt1 && prompt2) {
@@ -1347,7 +1508,9 @@
 
         // 预置按钮点击
         presetBtns.forEach(presetBtn => {
-            presetBtn.addEventListener('click', () => {
+            presetBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 if (presetBtn.dataset.custom) {
                     inputArea.classList.add('show');
                     input.focus();
@@ -1386,7 +1549,9 @@
         });
 
         // 发送按钮
-        sendBtn.addEventListener('click', () => {
+        sendBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             if (input.value.trim()) {
                 const mergedPrompt = mergeDecoratorsWithPrompt(input.value.trim(), selectedDecorators);
                 selectedDecorators = [];
@@ -1395,7 +1560,9 @@
         });
 
         // 取消按钮
-        cancelBtn.addEventListener('click', () => {
+        cancelBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             selectedDecorators = [];
             closePanel();
         });
@@ -1407,8 +1574,8 @@
     async function sendDualEditRequest(img, prompt1, prompt2, panel, btn) {
         const config = state.config;
 
-        if (!config.apiUrl) {
-            showError(panel, '请先配置API端点地址');
+        if (!config.comfyUrl) {
+            showError(panel, '请先配置 ComfyUI 服务器地址');
             return;
         }
         const isVideoTarget = isVideoElement(img);
@@ -1436,10 +1603,22 @@
         }
         state.processingImages.add(imgKey);
 
-        showLoading(panel);
+        showLoading(panel, '正在上传图片...');
         const container = !isVideoTarget ? img.closest('.mw-container') : null;
         const processingOverlay = container ? showProcessingOverlay(container, '双图生成中...') : null;
         const videoOverlay = isVideoTarget ? buildVideoProcessingOverlay(img, '双图生成中...') : null;
+
+        const jobKeys = [`${imgKey}#1`, `${imgKey}#2`];
+        const jobs = jobKeys.map((key) => registerActiveJob(key));
+        const makeHooks = (index) => ({
+            onQueued: (promptId) => {
+                jobs[index].promptId = promptId;
+            },
+            onTick: ({ elapsed, queueRemaining }) => {
+                if (jobs.some((job) => job.token.cancelled)) return;
+                updateProgress(`${index + 1}/2 ${formatProgressText(elapsed, queueRemaining)}`, panel, processingOverlay, videoOverlay);
+            }
+        });
 
         try {
             if (isVideoTarget) {
@@ -1451,13 +1630,14 @@
                 originalSrc = img.src;
             }
             const [newImageBlob1, newImageBlob2] = await Promise.all([
-                callEditAPI(imageBlob, prompt1, config),
-                callEditAPI(imageBlob, prompt2, config)
+                callComfyEdit(config, imageBlob, prompt1, jobs[0].token, makeHooks(0)),
+                callComfyEdit(config, imageBlob, prompt2, jobs[1].token, makeHooks(1))
             ]);
 
             const newImageUrl1 = URL.createObjectURL(newImageBlob1);
             const newImageUrl2 = URL.createObjectURL(newImageBlob2);
 
+            jobKeys.forEach(releaseActiveJob);
             closePanel();
             if (isVideoTarget) {
                 showVideoCompareView(img, originalSrc, newImageUrl1, newImageUrl2, '双图对比', btn);
@@ -1465,10 +1645,17 @@
                 showCompareView(img, originalSrc, newImageUrl1, newImageUrl2, '双图对比', btn);
             }
         } catch (error) {
+            if (error && error.cancelled) {
+                closePanel();
+                return;
+            }
+            // 一张失败时，把还在跑的兄弟任务一并取消，避免白占 GPU
+            cancelActiveJobs();
             console.error('[Magicwand] 双图编辑失败:', error);
             showError(panel, error.message || '双图编辑失败，请重试');
         } finally {
             state.processingImages.delete(imgKey);
+            jobKeys.forEach(releaseActiveJob);
             hideProcessingOverlay(processingOverlay);
             if (videoOverlay) {
                 videoOverlay.destroy();
@@ -1519,34 +1706,64 @@
 
         // 点击外部关闭
         setTimeout(() => {
-            document.addEventListener('click', handleOutsideClick);
+            document.addEventListener('click', handleOutsideClick, OUTSIDE_CLICK_OPTIONS);
         }, 0);
     }
 
-    // 处理外部点击
+    // 处理外部点击（捕获阶段：此时按钮还没被 innerHTML 替换移除，contains 判断才准确）
     function handleOutsideClick(e) {
         if (activePanel && !activePanel.contains(e.target) && !e.target.closest('.mw-edit-btn')) {
             closePanel();
         }
     }
 
-    // 关闭面板
+    // 关闭面板（若有任务在跑，同时取消 ComfyUI 队列中的任务）
     function closePanel() {
         if (activePanel) {
             activePanel.remove();
             activePanel = null;
         }
-        document.removeEventListener('click', handleOutsideClick);
+        document.removeEventListener('click', handleOutsideClick, OUTSIDE_CLICK_OPTIONS);
+        cancelActiveJobs();
     }
 
-    // 显示加载状态
-    function showLoading(panel) {
+    // 显示加载状态（带取消按钮，点击即在 ComfyUI 侧撤销任务）
+    function showLoading(panel, text) {
         panel.innerHTML = `
             <div class="mw-loading">
                 <div class="mw-spinner"></div>
-                <span>正在编辑图片...</span>
+                <span>${text || '正在编辑图片...'}</span>
+                <button class="mw-loading-cancel">取消生成</button>
             </div>
         `;
+        const cancelBtn = panel.querySelector('.mw-loading-cancel');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closePanel();
+            });
+        }
+    }
+
+    function shortenText(text, maxLength = 20) {
+        const value = String(text || '');
+        return value.length > maxLength ? `${value.substring(0, maxLength)}...` : value;
+    }
+
+    // 同步更新面板与遮罩上的进度文案
+    function updateProgress(text, panel, processingOverlay, videoOverlay) {
+        if (panel) {
+            const label = panel.querySelector('.mw-loading span');
+            if (label) label.textContent = text;
+        }
+        if (processingOverlay) {
+            const label = processingOverlay.querySelector('.mw-processing-text');
+            if (label) label.textContent = text;
+        }
+        if (videoOverlay && typeof videoOverlay.setText === 'function') {
+            videoOverlay.setText(text);
+        }
     }
 
     // 显示错误
@@ -1563,7 +1780,10 @@
     function showProcessingOverlay(container, prompt) {
         const overlay = document.createElement('div');
         overlay.className = 'mw-processing-overlay';
-        overlay.innerHTML = `<span class="mw-processing-text">${prompt.substring(0, 20)}${prompt.length > 20 ? '...' : ''}</span>`;
+        const label = document.createElement('span');
+        label.className = 'mw-processing-text';
+        label.textContent = shortenText(prompt);
+        overlay.appendChild(label);
         container.appendChild(overlay);
         return overlay;
     }
@@ -1614,7 +1834,10 @@
     function buildVideoProcessingOverlay(video, prompt) {
         const overlay = document.createElement('div');
         overlay.className = 'mw-processing-overlay mw-video-processing-overlay';
-        overlay.innerHTML = `<span class="mw-processing-text">${prompt.substring(0, 20)}${prompt.length > 20 ? '...' : ''}</span>`;
+        const label = document.createElement('span');
+        label.className = 'mw-processing-text';
+        label.textContent = shortenText(prompt);
+        overlay.appendChild(label);
         document.body.appendChild(overlay);
 
         const updatePosition = () => {
@@ -1633,6 +1856,9 @@
 
         return {
             overlay,
+            setText: (text) => {
+                label.textContent = text;
+            },
             destroy: () => {
                 window.removeEventListener('scroll', onMove, true);
                 window.removeEventListener('resize', onMove);
@@ -1660,8 +1886,8 @@
     async function sendEditRequest(img, prompt, panel, btn) {
         const config = state.config;
 
-        if (!config.apiUrl) {
-            showError(panel, '请先配置API端点地址');
+        if (!config.comfyUrl) {
+            showError(panel, '请先配置 ComfyUI 服务器地址');
             return;
         }
         const isVideoTarget = isVideoElement(img);
@@ -1689,10 +1915,12 @@
         }
         state.processingImages.add(imgKey);
 
-        showLoading(panel);
+        showLoading(panel, '正在上传图片...');
         const container = !isVideoTarget ? img.closest('.mw-container') : null;
         const processingOverlay = container ? showProcessingOverlay(container, prompt) : null;
         const videoOverlay = isVideoTarget ? buildVideoProcessingOverlay(img, prompt) : null;
+
+        const job = registerActiveJob(imgKey);
 
         try {
             if (isVideoTarget) {
@@ -1703,9 +1931,18 @@
                 imageBlob = await fetchImage(imgSrc);
                 originalSrc = img.src;
             }
-            const newImageBlob = await callEditAPI(imageBlob, prompt, config);
+            const newImageBlob = await callComfyEdit(config, imageBlob, prompt, job.token, {
+                onQueued: (promptId) => {
+                    job.promptId = promptId;
+                },
+                onTick: ({ elapsed, queueRemaining }) => {
+                    if (job.token.cancelled) return;
+                    updateProgress(formatProgressText(elapsed, queueRemaining), panel, processingOverlay, videoOverlay);
+                }
+            });
 
             const newImageUrl = URL.createObjectURL(newImageBlob);
+            releaseActiveJob(imgKey);
             closePanel();
             if (isVideoTarget) {
                 showVideoCompareView(img, originalSrc, newImageUrl, originalSrc, prompt, btn);
@@ -1714,10 +1951,15 @@
             }
 
         } catch (error) {
+            if (error && error.cancelled) {
+                closePanel();
+                return;
+            }
             console.error('[Magicwand] 编辑失败:', error);
             showError(panel, error.message || '编辑失败，请重试');
         } finally {
             state.processingImages.delete(imgKey);
+            releaseActiveJob(imgKey);
             hideProcessingOverlay(processingOverlay);
             if (videoOverlay) {
                 videoOverlay.destroy();
@@ -1758,41 +2000,572 @@
         });
     }
 
-    // 调用编辑API
-    async function callEditAPI(imageBlob, prompt, config) {
+    // ==================== ComfyUI 直连客户端 ====================
+    // 流程：POST /upload/image → POST /prompt → 轮询 GET /history/<id> → GET /view
+
+    const COMFY_CLIENT_ID = `magicwand-${Math.random().toString(36).slice(2, 10)}`;
+
+    function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function createCancelledError() {
+        const error = new Error('任务已取消');
+        error.cancelled = true;
+        return error;
+    }
+
+    function safeJson(text) {
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function randomSeed() {
+        try {
+            const buf = new Uint32Array(2);
+            crypto.getRandomValues(buf);
+            return (buf[0] * 0x200000 + (buf[1] >>> 11)) % Number.MAX_SAFE_INTEGER;
+        } catch (e) {
+            return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+        }
+    }
+
+    // 统一的 GM_xmlhttpRequest 封装：拼装服务根地址、可选鉴权、统一超时与网络错误
+    function gmRequest(config, options) {
+        const {
+            method = 'GET',
+            path,
+            headers = {},
+            data,
+            responseType = 'text',
+            timeoutMs = 60000
+        } = options;
+        const base = (config.comfyUrl || '').replace(/\/+$/, '');
+        const requestHeaders = { ...headers };
+        if (config.apiKey) {
+            requestHeaders['Authorization'] = `Bearer ${config.apiKey}`;
+        }
         return new Promise((resolve, reject) => {
-            const formData = new FormData();
-            formData.append('ImageInput', imageBlob, 'image.png');
-            formData.append('prompt', prompt);
-
-            const headers = {};
-            if (config.apiKey) {
-                headers['Authorization'] = `Bearer ${config.apiKey}`;
-            }
-
             GM_xmlhttpRequest({
-                method: 'POST',
-                url: config.apiUrl,
-                data: formData,
-                headers: headers,
-                responseType: 'blob',
-                timeout: 60000,
-                onload: (response) => {
-                    if (response.status === 200) {
-                        resolve(response.response);
-                    } else {
-                        try {
-                            const error = JSON.parse(response.responseText);
-                            reject(new Error(error.error || error.detail || '服务器错误'));
-                        } catch {
-                            reject(new Error(`服务器错误: ${response.status}`));
-                        }
-                    }
-                },
-                onerror: () => reject(new Error('网络请求失败')),
-                ontimeout: () => reject(new Error('请求超时，图片可能较大'))
+                method: method,
+                url: base + path,
+                data: data,
+                headers: requestHeaders,
+                responseType: responseType,
+                timeout: timeoutMs,
+                onload: (response) => resolve(response),
+                onerror: () => reject(new Error('网络请求失败，请检查 ComfyUI 地址是否可访问')),
+                ontimeout: () => reject(new Error('网络请求超时'))
             });
         });
+    }
+
+    function parseJsonResponse(response, label) {
+        const payload = safeJson(response.responseText);
+        if (!payload) {
+            throw new Error(`${label}返回内容无法解析（HTTP ${response.status}）`);
+        }
+        return payload;
+    }
+
+    // 把 ComfyUI 的 400 错误整理成人话（含出错节点与原始异常信息）
+    function formatComfyError(payload, fallback) {
+        if (!payload || typeof payload !== 'object') return fallback;
+        const parts = [];
+        if (payload.error && payload.error.message) {
+            parts.push(payload.error.message);
+            if (payload.error.details) parts.push(String(payload.error.details));
+        }
+        const nodeErrors = payload.node_errors || {};
+        Object.keys(nodeErrors).forEach((nodeId) => {
+            const info = nodeErrors[nodeId] || {};
+            const classType = info.class_type ? ` [${info.class_type}]` : '';
+            (info.errors || []).forEach((item) => {
+                const message = (item && item.message) ? item.message : '校验失败';
+                const details = (item && item.details) ? `（${item.details}）` : '';
+                parts.push(`节点 ${nodeId}${classType}: ${message}${details}`);
+            });
+        });
+        return parts.length ? parts.join('；') : fallback;
+    }
+
+    function formatProgressText(elapsed, queueRemaining) {
+        const seconds = Math.max(0, Math.round(elapsed || 0));
+        if (typeof queueRemaining === 'number' && queueRemaining > 0) {
+            return `排队中（前面 ${queueRemaining} 个）· ${seconds}s`;
+        }
+        return `生成中 · ${seconds}s`;
+    }
+
+    // ---------- 工作流拼装 ----------
+
+    // 每行一条：LoRA名称@强度
+    function parseLoraList(loraList) {
+        return String(loraList || '')
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+                const at = line.lastIndexOf('@');
+                if (at <= 0) return { name: line, strength: 1 };
+                const strength = Number(line.slice(at + 1));
+                return {
+                    name: line.slice(0, at).trim(),
+                    strength: Number.isFinite(strength) ? strength : 1
+                };
+            })
+            .filter((item) => item.name);
+    }
+
+    // Qwen-Image-2.1 图像编辑工作流（B18 基础版 + 解锁 UNet + LoRA 链）
+    function buildComfyWorkflow(config, imageName, prompt, seed) {
+        const workflow = {
+            '4': {
+                class_type: 'CLIPLoader',
+                _meta: { title: '加载CLIP' },
+                inputs: { clip_name: config.clipName, type: config.clipType || 'qwen_image', device: 'default' }
+            },
+            '13': {
+                class_type: 'VAELoader',
+                _meta: { title: '加载VAE' },
+                inputs: { vae_name: config.vaeName }
+            },
+            '38': {
+                class_type: 'LoadImage',
+                _meta: { title: '待编辑原图' },
+                inputs: { image: imageName }
+            },
+            '40': {
+                class_type: 'ImageScaleToTotalPixels',
+                _meta: { title: '按像素预算缩放' },
+                inputs: { upscale_method: 'lanczos', megapixels: config.megapixels, resolution_steps: 1, image: ['38', 0] }
+            },
+            '41': {
+                class_type: 'GetImageSize',
+                _meta: { title: '获取尺寸' },
+                inputs: { image: ['40', 0] }
+            },
+            '36': {
+                class_type: 'EmptyLatentImage',
+                _meta: { title: '空Latent' },
+                inputs: { width: ['41', 0], height: ['41', 1], batch_size: 1 }
+            },
+            '37': {
+                class_type: 'TextEncodeQwenImage21',
+                _meta: { title: 'Qwen文本/参考图编码' },
+                inputs: {
+                    prompt: prompt,
+                    negative_prompt: '',
+                    resolution: config.refResolution,
+                    clip: ['4', 0],
+                    'images.image_1': ['40', 0],
+                    vae: ['13', 0]
+                }
+            },
+            '5': {
+                class_type: 'UNETLoader',
+                _meta: { title: '加载UNet' },
+                inputs: { unet_name: config.unetName, weight_dtype: 'default' }
+            },
+            '25': {
+                class_type: 'VAEDecode',
+                _meta: { title: 'VAE解码' },
+                inputs: { samples: ['23', 0], vae: ['13', 0] }
+            },
+            '9': {
+                class_type: 'SaveImage',
+                _meta: { title: '保存图像' },
+                inputs: { filename_prefix: 'magicwand', images: ['25', 0] }
+            }
+        };
+
+        // LoRA 链：UNETLoader → LoRA1 → LoRA2 → ... → ModelAttentionBackend → KSampler
+        let modelRef = ['5', 0];
+        parseLoraList(config.loraList).forEach((lora, index) => {
+            const nodeId = `lora_${index}`;
+            workflow[nodeId] = {
+                class_type: 'LoraLoaderModelOnly',
+                _meta: { title: `LoRA ${index + 1}` },
+                inputs: { lora_name: lora.name, strength_model: lora.strength, model: modelRef }
+            };
+            modelRef = [nodeId, 0];
+        });
+
+        workflow['39'] = {
+            class_type: 'ModelAttentionBackend',
+            _meta: { title: '注意力后端' },
+            inputs: { attention: 'comfy kitchen attention', model: modelRef }
+        };
+        workflow['23'] = {
+            class_type: 'KSampler',
+            _meta: { title: 'K采样器' },
+            inputs: {
+                seed: seed,
+                steps: config.steps,
+                cfg: config.cfg,
+                sampler_name: config.samplerName,
+                scheduler: config.scheduler,
+                denoise: 1.0,
+                model: ['39', 0],
+                positive: ['37', 0],
+                negative: ['37', 1],
+                latent_image: ['36', 0]
+            }
+        };
+
+        return workflow;
+    }
+
+    function jsonEscapeString(value) {
+        return JSON.stringify(String(value)).slice(1, -1);
+    }
+
+    // 高级模板：字符串占位符写成 "%PROMPT%"，数字占位符写成 %STEPS%
+    function renderWorkflowTemplate(template, variables) {
+        let rendered = template;
+        Object.keys(variables).forEach((name) => {
+            const token = `%${name}%`;
+            if (!rendered.includes(token)) return;
+            const value = variables[name];
+            const replacement = typeof value === 'number' ? String(value) : jsonEscapeString(value);
+            rendered = rendered.split(token).join(replacement);
+        });
+        try {
+            const parsed = JSON.parse(rendered);
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                throw new Error('工作流必须是一个 JSON 对象');
+            }
+            return parsed;
+        } catch (error) {
+            throw new Error(`工作流模板解析失败：${error.message}`);
+        }
+    }
+
+    function buildWorkflowForRequest(config, imageName, prompt, seed) {
+        const template = (config.workflowTemplate || '').trim();
+        if (!template) {
+            return buildComfyWorkflow(config, imageName, prompt, seed);
+        }
+        return renderWorkflowTemplate(template, {
+            IMAGE: imageName,
+            PROMPT: prompt,
+            SEED: seed,
+            STEPS: config.steps,
+            CFG: config.cfg,
+            MEGAPIXELS: config.megapixels,
+            REF_RESOLUTION: config.refResolution,
+            UNET: config.unetName,
+            CLIP: config.clipName,
+            VAE: config.vaeName,
+            FILENAME_PREFIX: 'magicwand'
+        });
+    }
+
+    // ---------- 客户端预缩放（只影响上传体积，最终尺寸仍由工作流决定） ----------
+
+    async function maybeDownscaleBlob(blob, megapixels) {
+        const maxPixels = Math.max(1, Number(megapixels) || 1) * 2 * 1000000;
+        try {
+            if (typeof createImageBitmap !== 'function') return blob;
+            const bitmap = await createImageBitmap(blob);
+            const pixels = bitmap.width * bitmap.height;
+            if (pixels <= maxPixels) {
+                if (typeof bitmap.close === 'function') bitmap.close();
+                return blob;
+            }
+            const scale = Math.sqrt(maxPixels / pixels);
+            const width = Math.max(1, Math.round(bitmap.width * scale));
+            const height = Math.max(1, Math.round(bitmap.height * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+            if (typeof bitmap.close === 'function') bitmap.close();
+            const mime = (blob.type === 'image/jpeg' || blob.type === 'image/webp') ? 'image/jpeg' : 'image/png';
+            const scaled = await new Promise((resolve) => canvas.toBlob(resolve, mime, 0.92));
+            return scaled || blob;
+        } catch (error) {
+            console.warn('[Magicwand] 预缩放失败，改用原图上传:', error);
+            return blob;
+        }
+    }
+
+    // ---------- 接口调用 ----------
+
+    function guessUploadExt(blob) {
+        const type = (blob && blob.type) || '';
+        if (type.indexOf('png') !== -1) return '.png';
+        if (type.indexOf('webp') !== -1) return '.webp';
+        if (type.indexOf('jpeg') !== -1 || type.indexOf('jpg') !== -1) return '.jpg';
+        return '.png';
+    }
+
+    // FormData 不可用时的降级：手写 multipart/form-data 请求体
+    async function buildMultipartBody(blob, filename) {
+        const boundary = `----MagicwandBoundary${Math.random().toString(36).slice(2)}`;
+        const encoder = new TextEncoder();
+        const chunks = [
+            encoder.encode(`--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="${filename}"\r\nContent-Type: ${blob.type || 'image/png'}\r\n\r\n`),
+            new Uint8Array(await blob.arrayBuffer()),
+            encoder.encode('\r\n'),
+            encoder.encode(`--${boundary}\r\nContent-Disposition: form-data; name="type"\r\n\r\ninput\r\n`),
+            encoder.encode(`--${boundary}\r\nContent-Disposition: form-data; name="overwrite"\r\n\r\ntrue\r\n`),
+            encoder.encode(`--${boundary}--\r\n`)
+        ];
+        const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        const body = new Uint8Array(total);
+        let offset = 0;
+        chunks.forEach((chunk) => {
+            body.set(chunk, offset);
+            offset += chunk.length;
+        });
+        return { body: body.buffer, contentType: `multipart/form-data; boundary=${boundary}` };
+    }
+
+    async function uploadImage(config, blob) {
+        const filename = `mw_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${guessUploadExt(blob)}`;
+        const timeoutMs = Math.min(Math.max(60000, (config.timeout * 1000) / 2), 300000);
+        let response;
+
+        if (typeof FormData === 'function') {
+            const formData = new FormData();
+            formData.append('image', blob, filename);
+            formData.append('type', 'input');
+            formData.append('overwrite', 'true');
+            response = await gmRequest(config, {
+                method: 'POST',
+                path: '/upload/image',
+                data: formData,
+                timeoutMs: timeoutMs
+            });
+        } else {
+            console.warn('[Magicwand] FormData 不可用，降级为手写 multipart 上传');
+            const fallback = await buildMultipartBody(blob, filename);
+            response = await gmRequest(config, {
+                method: 'POST',
+                path: '/upload/image',
+                data: fallback.body,
+                headers: { 'Content-Type': fallback.contentType },
+                timeoutMs: timeoutMs
+            });
+        }
+
+        if (response.status !== 200) {
+            throw new Error(formatComfyError(safeJson(response.responseText), `上传图片失败（HTTP ${response.status}）`));
+        }
+        const info = parseJsonResponse(response, '上传图片');
+        if (!info.name) {
+            throw new Error('上传图片失败：服务器未返回文件名');
+        }
+        return info.subfolder ? `${info.subfolder}/${info.name}` : info.name;
+    }
+
+    async function queuePrompt(config, workflow) {
+        const response = await gmRequest(config, {
+            method: 'POST',
+            path: '/prompt',
+            data: JSON.stringify({ prompt: workflow, client_id: COMFY_CLIENT_ID }),
+            headers: { 'Content-Type': 'application/json' },
+            timeoutMs: 30000
+        });
+        if (response.status !== 200) {
+            throw new Error(formatComfyError(safeJson(response.responseText), `提交工作流失败（HTTP ${response.status}）`));
+        }
+        const payload = parseJsonResponse(response, '提交工作流');
+        if (!payload.prompt_id) {
+            throw new Error('提交工作流失败：服务器未返回 prompt_id');
+        }
+        return payload.prompt_id;
+    }
+
+    async function fetchQueueRemaining(config) {
+        try {
+            const response = await gmRequest(config, { method: 'GET', path: '/prompt', timeoutMs: 15000 });
+            if (response.status !== 200) return null;
+            const payload = safeJson(response.responseText);
+            const remaining = payload && payload.exec_info ? payload.exec_info.queue_remaining : null;
+            return typeof remaining === 'number' ? remaining : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function collectOutputImages(outputs) {
+        const images = [];
+        Object.keys(outputs || {}).forEach((nodeId) => {
+            const output = outputs[nodeId] || {};
+            (output.images || []).forEach((image) => {
+                if (image && image.filename) images.push(image);
+            });
+        });
+        const outputImages = images.filter((image) => (image.type || 'output') === 'output');
+        return outputImages.length ? outputImages : images;
+    }
+
+    function formatHistoryError(entry) {
+        const status = (entry && entry.status) || {};
+        const details = [];
+        (status.messages || []).forEach((item) => {
+            if (!Array.isArray(item)) return;
+            const payload = item[1];
+            if (!payload || typeof payload !== 'object') return;
+            if (payload.exception_message) details.push(payload.exception_message);
+            else if (payload.message) details.push(payload.message);
+        });
+        return details.length ? `生成失败：${details.join('；')}` : '生成失败，请查看 ComfyUI 控制台日志';
+    }
+
+    async function waitForResult(config, promptId, token, onTick) {
+        const startedAt = Date.now();
+        const timeoutMs = Math.max(10, config.timeout) * 1000;
+        const pollMs = Math.max(500, config.pollInterval * 1000);
+
+        while (true) {
+            if (token && token.cancelled) throw createCancelledError();
+
+            const response = await gmRequest(config, {
+                method: 'GET',
+                path: `/history/${encodeURIComponent(promptId)}`,
+                timeoutMs: 30000
+            });
+
+            if (response.status === 200) {
+                const history = safeJson(response.responseText) || {};
+                const entry = history[promptId];
+                if (entry) {
+                    const status = entry.status || {};
+                    if (status.status_str === 'error') {
+                        throw new Error(formatHistoryError(entry));
+                    }
+                    if (status.completed) {
+                        const images = collectOutputImages(entry.outputs);
+                        if (images.length) return images[0];
+                        throw new Error('生成已完成，但没有找到输出图片');
+                    }
+                }
+            }
+
+            if (Date.now() - startedAt > timeoutMs) {
+                throw new Error(`等待超时（${config.timeout} 秒），ComfyUI 队列可能仍在处理，可在设置里调大超时时间`);
+            }
+
+            const queueRemaining = await fetchQueueRemaining(config);
+            if (typeof onTick === 'function') {
+                onTick({ elapsed: (Date.now() - startedAt) / 1000, queueRemaining: queueRemaining });
+            }
+            await sleep(pollMs);
+        }
+    }
+
+    async function fetchOutputImage(config, imageInfo) {
+        const query = new URLSearchParams({
+            filename: imageInfo.filename,
+            subfolder: imageInfo.subfolder || '',
+            type: imageInfo.type || 'output'
+        }).toString();
+        const response = await gmRequest(config, {
+            method: 'GET',
+            path: `/view?${query}`,
+            responseType: 'blob',
+            timeoutMs: 120000
+        });
+        if (response.status !== 200 || !response.response) {
+            throw new Error(`下载生成图失败（HTTP ${response.status}）`);
+        }
+        return response.response;
+    }
+
+    // 只删除自己的排队任务、只在自己任务运行时中断，避免影响同服务器的其他任务
+    async function cancelPrompt(config, promptId) {
+        if (!config.comfyUrl || !promptId) return;
+        try {
+            const response = await gmRequest(config, { method: 'GET', path: '/queue', timeoutMs: 15000 });
+            if (response.status !== 200) return;
+            const queue = safeJson(response.responseText) || {};
+            const isPending = (queue.queue_pending || []).some((item) => Array.isArray(item) && item[1] === promptId);
+            const isRunning = (queue.queue_running || []).some((item) => Array.isArray(item) && item[1] === promptId);
+            if (isPending) {
+                await gmRequest(config, {
+                    method: 'POST',
+                    path: '/queue',
+                    data: JSON.stringify({ delete: [promptId] }),
+                    headers: { 'Content-Type': 'application/json' },
+                    timeoutMs: 15000
+                });
+            }
+            if (isRunning) {
+                await gmRequest(config, { method: 'POST', path: '/interrupt', timeoutMs: 15000 });
+            }
+        } catch (error) {
+            console.warn('[Magicwand] 取消 ComfyUI 任务失败:', error);
+        }
+    }
+
+    async function testComfyConnection(config) {
+        const response = await gmRequest(config, { method: 'GET', path: '/system_stats', timeoutMs: 15000 });
+        if (response.status !== 200) {
+            throw new Error(`连接失败（HTTP ${response.status}），请确认填的是 ComfyUI 服务根地址`);
+        }
+        const stats = parseJsonResponse(response, '测试连接');
+        const device = (stats.devices && stats.devices[0] && stats.devices[0].name) ? stats.devices[0].name : '未知设备';
+        const version = (stats.system && stats.system.comfyui_version) ? stats.system.comfyui_version : '未知版本';
+        return { version: version, device: device };
+    }
+
+    // ---------- 任务登记与取消 ----------
+
+    function createCancelToken() {
+        return { cancelled: false };
+    }
+
+    function registerActiveJob(key) {
+        const job = { token: createCancelToken(), promptId: null };
+        state.activeJobs.set(key, job);
+        return job;
+    }
+
+    function releaseActiveJob(key) {
+        state.activeJobs.delete(key);
+    }
+
+    function cancelActiveJobs() {
+        if (state.activeJobs.size === 0) return;
+        const jobs = Array.from(state.activeJobs.values());
+        state.activeJobs.clear();
+        jobs.forEach((job) => {
+            job.token.cancelled = true;
+            if (job.promptId) {
+                cancelPrompt(state.config, job.promptId);
+            }
+        });
+    }
+
+    // ---------- 对外入口：一次完整的图片编辑 ----------
+
+    async function callComfyEdit(config, imageBlob, prompt, token, hooks = {}) {
+        const uploadBlob = await maybeDownscaleBlob(imageBlob, config.megapixels);
+        if (token && token.cancelled) throw createCancelledError();
+
+        const imageName = await uploadImage(config, uploadBlob);
+        if (token && token.cancelled) throw createCancelledError();
+
+        const seed = config.seedMode === 'fixed' ? Math.round(config.fixedSeed) : randomSeed();
+        const workflow = buildWorkflowForRequest(config, imageName, prompt, seed);
+        const promptId = await queuePrompt(config, workflow);
+
+        if (typeof hooks.onQueued === 'function') {
+            hooks.onQueued(promptId);
+        }
+        if (token && token.cancelled) {
+            cancelPrompt(config, promptId);
+            throw createCancelledError();
+        }
+
+        const imageInfo = await waitForResult(config, promptId, token, hooks.onTick);
+        return fetchOutputImage(config, imageInfo);
     }
 
     // 显示对比视图
@@ -2001,10 +2774,17 @@
         updatePosition();
     }
 
+    function escapeHtml(value) {
+        return String(value === null || value === undefined ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
     // 显示设置面板
     function showSettingsPanel() {
         const config = state.config;
-
         const overlay = document.createElement('div');
         overlay.className = 'mw-settings-overlay';
 
@@ -2044,15 +2824,96 @@
                 <div class="mw-settings-title">魔法编辑设置</div>
 
                 <div class="mw-settings-group">
-                    <label class="mw-settings-label">API 端点地址</label>
-                    <input type="text" class="mw-settings-input mw-api-url" value="${config.apiUrl}" placeholder="https://example.com/generate">
-                    <div class="mw-settings-hint">ComfyUI服务的generate接口地址</div>
+                    <label class="mw-settings-label">ComfyUI 服务器地址</label>
+                    <input type="text" class="mw-settings-input mw-comfy-url" value="${escapeHtml(config.comfyUrl)}" placeholder="https://u741047-xxxx.westd.seetacloud.com:8443">
+                    <div class="mw-settings-hint">填 ComfyUI 服务根地址（AutoDL 用 6006 端口、主机名 u 前缀，不要填 6008 控制面板或 /generate）</div>
+                    <button class="mw-test-btn">测试连接</button>
+                    <div class="mw-test-status"></div>
                 </div>
 
                 <div class="mw-settings-group">
                     <label class="mw-settings-label">API Key（可选）</label>
-                    <input type="text" class="mw-settings-input mw-api-key" value="${config.apiKey}" placeholder="如需认证请填写">
+                    <input type="text" class="mw-settings-input mw-api-key" value="${escapeHtml(config.apiKey)}" placeholder="走反向代理/隧道需要鉴权时填写">
                 </div>
+
+                <div class="mw-settings-section">模型配置</div>
+
+                <div class="mw-settings-group">
+                    <label class="mw-settings-label">UNet 模型</label>
+                    <input type="text" class="mw-settings-input mw-unet-name" value="${escapeHtml(config.unetName)}">
+                </div>
+
+                <div class="mw-settings-row">
+                    <div class="mw-settings-group">
+                        <label class="mw-settings-label">CLIP</label>
+                        <input type="text" class="mw-settings-input mw-clip-name" value="${escapeHtml(config.clipName)}">
+                    </div>
+                    <div class="mw-settings-group">
+                        <label class="mw-settings-label">VAE</label>
+                        <input type="text" class="mw-settings-input mw-vae-name" value="${escapeHtml(config.vaeName)}">
+                    </div>
+                </div>
+
+                <div class="mw-settings-group">
+                    <label class="mw-settings-label">LoRA 列表（每行一条：名称@强度）</label>
+                    <textarea class="mw-settings-textarea mw-lora-list"></textarea>
+                    <div class="mw-settings-hint">按顺序串联后接入 ModelAttentionBackend；留空则不加载 LoRA</div>
+                </div>
+
+                <div class="mw-settings-section">生成参数</div>
+
+                <div class="mw-settings-row">
+                    <div class="mw-settings-group">
+                        <label class="mw-settings-label">步数</label>
+                        <input type="number" class="mw-settings-input mw-steps" min="1" max="200" value="${config.steps}">
+                    </div>
+                    <div class="mw-settings-group">
+                        <label class="mw-settings-label">像素预算 (MP)</label>
+                        <input type="number" class="mw-settings-input mw-megapixels" min="0.1" max="16" step="0.1" value="${config.megapixels}">
+                    </div>
+                </div>
+
+                <div class="mw-settings-row">
+                    <div class="mw-settings-group">
+                        <label class="mw-settings-label">采样器</label>
+                        <input type="text" class="mw-settings-input mw-sampler" value="${escapeHtml(config.samplerName)}">
+                    </div>
+                    <div class="mw-settings-group">
+                        <label class="mw-settings-label">调度器</label>
+                        <input type="text" class="mw-settings-input mw-scheduler" value="${escapeHtml(config.scheduler)}">
+                    </div>
+                </div>
+
+                <div class="mw-settings-row">
+                    <div class="mw-settings-group">
+                        <label class="mw-settings-label">参考图分辨率</label>
+                        <input type="number" class="mw-settings-input mw-ref-resolution" min="0" max="4096" step="32" value="${config.refResolution}">
+                    </div>
+                    <div class="mw-settings-group">
+                        <label class="mw-settings-label">超时 (秒)</label>
+                        <input type="number" class="mw-settings-input mw-timeout" min="10" max="3600" value="${config.timeout}">
+                    </div>
+                </div>
+
+                <div class="mw-settings-group">
+                    <label class="mw-settings-label">随机种子</label>
+                    <select class="mw-settings-input mw-seed-mode">
+                        <option value="random"${config.seedMode === 'random' ? ' selected' : ''}>每次随机</option>
+                        <option value="fixed"${config.seedMode === 'fixed' ? ' selected' : ''}>固定</option>
+                    </select>
+                    <input type="number" class="mw-settings-input mw-fixed-seed" style="margin-top: 6px;" min="0" value="${config.fixedSeed}">
+                    <div class="mw-settings-hint">仅「固定」模式使用该种子值</div>
+                </div>
+
+                <div class="mw-settings-section">高级</div>
+
+                <div class="mw-settings-group">
+                    <label class="mw-settings-label">工作流模板（可选，整份覆盖）</label>
+                    <textarea class="mw-settings-textarea mw-workflow-template" style="min-height: 120px;"></textarea>
+                    <div class="mw-settings-hint">留空则使用上面的结构化配置。内容为 ComfyUI API 格式 JSON；字符串占位符写 "%PROMPT%"、"%IMAGE%" 等，数字占位符写 %SEED%、%STEPS%、%MEGAPIXELS%、%CFG%、%REF_RESOLUTION%</div>
+                </div>
+
+                <div class="mw-settings-section">提示词</div>
 
                 <div class="mw-settings-group">
                     <label class="mw-settings-label">预置提示词</label>
@@ -2076,14 +2937,52 @@
 
         document.body.appendChild(overlay);
 
-        const apiUrlInput = overlay.querySelector('.mw-api-url');
+        const comfyUrlInput = overlay.querySelector('.mw-comfy-url');
         const apiKeyInput = overlay.querySelector('.mw-api-key');
+        const unetInput = overlay.querySelector('.mw-unet-name');
+        const clipInput = overlay.querySelector('.mw-clip-name');
+        const vaeInput = overlay.querySelector('.mw-vae-name');
+        const loraTextarea = overlay.querySelector('.mw-lora-list');
+        const stepsInput = overlay.querySelector('.mw-steps');
+        const megapixelsInput = overlay.querySelector('.mw-megapixels');
+        const samplerInput = overlay.querySelector('.mw-sampler');
+        const schedulerInput = overlay.querySelector('.mw-scheduler');
+        const refResolutionInput = overlay.querySelector('.mw-ref-resolution');
+        const timeoutInput = overlay.querySelector('.mw-timeout');
+        const seedModeSelect = overlay.querySelector('.mw-seed-mode');
+        const fixedSeedInput = overlay.querySelector('.mw-fixed-seed');
+        const templateTextarea = overlay.querySelector('.mw-workflow-template');
+        const testBtn = overlay.querySelector('.mw-test-btn');
+        const testStatus = overlay.querySelector('.mw-test-status');
         const addPromptBtn = overlay.querySelector('.mw-add-prompt-btn');
         const addDecoratorBtn = overlay.querySelector('.mw-add-decorator-btn');
         const saveBtn = overlay.querySelector('.mw-save-btn');
         const closeBtn = overlay.querySelector('.mw-close-btn');
         const promptsList = overlay.querySelector('.mw-prompts-list');
         const decoratorsList = overlay.querySelector('.mw-decorators-list');
+
+        loraTextarea.value = config.loraList || '';
+        templateTextarea.value = config.workflowTemplate || '';
+
+        // 测试连接
+        const setTestStatus = (text, stateName) => {
+            testStatus.textContent = text;
+            testStatus.className = `mw-test-status ${stateName || ''}`;
+        };
+        testBtn.addEventListener('click', async () => {
+            const url = comfyUrlInput.value.trim();
+            if (!url) {
+                setTestStatus('请先填写 ComfyUI 服务器地址', 'err');
+                return;
+            }
+            setTestStatus('正在连接...', 'pending');
+            try {
+                const info = await testComfyConnection({ ...config, comfyUrl: url, apiKey: apiKeyInput.value.trim() });
+                setTestStatus(`连接成功：ComfyUI ${info.version} · ${info.device}`, 'ok');
+            } catch (error) {
+                setTestStatus(error.message || '连接失败', 'err');
+            }
+        });
 
         // 删除自定义提示词
         promptsList.addEventListener('click', (e) => {
@@ -2141,10 +3040,23 @@
 
         // 保存
         saveBtn.addEventListener('click', () => {
-            config.apiUrl = apiUrlInput.value.trim();
+            config.comfyUrl = comfyUrlInput.value.trim();
             config.apiKey = apiKeyInput.value.trim();
-            state.config = config;
-            saveConfig(config);
+            config.unetName = unetInput.value.trim() || COMFY_DEFAULTS.unetName;
+            config.clipName = clipInput.value.trim() || COMFY_DEFAULTS.clipName;
+            config.vaeName = vaeInput.value.trim() || COMFY_DEFAULTS.vaeName;
+            config.loraList = loraTextarea.value;
+            config.steps = Number(stepsInput.value);
+            config.megapixels = Number(megapixelsInput.value);
+            config.samplerName = samplerInput.value.trim() || COMFY_DEFAULTS.samplerName;
+            config.scheduler = schedulerInput.value.trim() || COMFY_DEFAULTS.scheduler;
+            config.refResolution = Number(refResolutionInput.value);
+            config.timeout = Number(timeoutInput.value);
+            config.seedMode = seedModeSelect.value === 'fixed' ? 'fixed' : 'random';
+            config.fixedSeed = Number(fixedSeedInput.value);
+            config.workflowTemplate = templateTextarea.value.trim();
+            // saveConfig 会做兜底与裁剪，并回传与内存结构一致的配置
+            state.config = saveConfig(config);
             overlay.remove();
             alert('设置已保存');
         });
@@ -2173,7 +3085,7 @@
     }
 
     // 脚本入口
-    console.log('[Magicwand] 脚本已加载，版本 1.0.4');
+    console.log(`[Magicwand] 脚本已加载，版本 ${SCRIPT_VERSION}`);
 
     if (isBlacklistedHost()) {
         console.log('[Magicwand] 当前站点在黑名单中，已跳过初始化');
@@ -2189,8 +3101,12 @@
         return;
     }
 
-    if (!state.config.apiUrl) {
-        console.log('[Magicwand] 未配置API端点，请通过油猴菜单设置');
+    if (legacyUrlMigrated) {
+        console.warn('[Magicwand] 已从旧的 /generate 接口地址迁移配置，请到设置里确认 ComfyUI 服务器地址（AutoDL 用 6006 端口、主机名 u 前缀）');
+    }
+
+    if (!state.config.comfyUrl) {
+        console.log('[Magicwand] 未配置 ComfyUI 服务器地址，请通过油猴菜单设置');
     }
 
     // 延迟扫描确保页面加载完成

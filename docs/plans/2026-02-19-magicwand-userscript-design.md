@@ -121,6 +121,10 @@
 
 ### 4. API调用模块
 
+> **已废弃（v1.1.0 起）**：本节描述的自建 `/generate`（MCP 封装）契约已移除，
+> 改为直连 ComfyUI 原生 API（`/upload/image` → `/prompt` → `/history` → `/view`）。
+> 现行方案见 [2026-10-01-comfyui-direct-api.md](2026-10-01-comfyui-direct-api.md)。
+
 **API规格：**
 - 端点：`POST /generate`
 - 格式：`multipart/form-data`
