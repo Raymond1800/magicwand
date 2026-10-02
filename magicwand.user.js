@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magicwand - 魔法图片编辑
 // @namespace    https://magicwand.ai/
-// @version      1.2.0
+// @version      1.3.0
 // @description  AI图片编辑油猴脚本，支持预置提示词和自定义编辑
 // @author       Magicwand
 // @match        *://*/*
@@ -19,16 +19,16 @@
     'use strict';
 
     // 脚本版本（与 userscript 头部保持一致）
-    const SCRIPT_VERSION = '1.2.0';
+    const SCRIPT_VERSION = '1.3.0';
 
-    // ComfyUI 默认工作流配置（Qwen-Image-2.1 图像编辑：B18 基础版 + 解锁 UNet + NSFW LoRA）
+    // ComfyUI 默认工作流配置（Qwen-Image-2.1 图像编辑：B18 基础版 + 解锁 UNet + 一条 Edit LoRA @1.0）
     // 该组合已在目标服务器上通过 /upload/image → /prompt → /history → /view 全链路实测
     const COMFY_DEFAULTS = {
         unetName: 'qwen/REDQW21-UNLOCKED-v1-BF16-ComfyMCP-builtwithqwen.safetensors',
         clipName: 'qwen3vl_8b_int8_convrot.safetensors',
         clipType: 'qwen_image',
         vaeName: 'qwen_image_2.1_vae_bf16.safetensors',
-        loraList: 'qwen/Qwen-Image-2.1 NSFW Image EditV2.safetensors@1.0\nqwen/Qwen-Image-2.1 NSFW Image EditV2.safetensors@0.8',
+        loraList: 'qwen/Qwen-Image-2.1 NSFW Image EditV2.safetensors@1.0',
         steps: 25,               // Qwen-Image-2.1 参考默认步数
         cfg: 1,                  // 固定为 1（负向分支被忽略）
         samplerName: 'euler',
@@ -72,7 +72,7 @@
         { name: '趴开', nude: true, prompt: '脱掉<image1>中女性的全部衣物。她面朝下，臀部高高抬起并正对镜头，双腿大幅分开，腰深陷，回头越过肩膀看向镜头。{decorator}保持<image1>中人物的面部结构、发型、身体比例、背景和光线不变。' }
     ],
     testPrompts: [
-        { name: '互动足交', prompt: '<image1>中女性仰躺在床上，上身微微支起，看向镜头。一名高大的中国肌肉男人跪在她脚前，她用两只光脚夹住并套弄他勃起的阴茎，脚趾扣在柱身上。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
+        { name: '互动足交', prompt: '<image1>中女性仰躺，头在画面远处，脚朝向镜头。一名高大的中国肌肉男人跪在她的双脚和镜头之间，面对她，胸口在她的脚掌外面。他勃起的阴茎从他自己的小腹伸进她两脚之间，被她相对的两只光脚夹住，脚趾贴着柱身。他的双手撑在床单上。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
         { name: '互动69', prompt: '改为侧躺的69姿势：<image1>中女性侧躺，一条腿高抬，含住一名中国男人勃起的阴茎。这名中国男人把脸埋在她两腿之间，舔她的阴部。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
         { name: '互动坐脸', prompt: '<image1>中女性跨坐在一名中国男人脸上，双膝分在他头的两侧，臀部压低，阴部贴住他的嘴，她低头看向镜头。这名中国男人双手抓住她的大腿。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
         { name: '互动床边喉', prompt: '<image1>中女性仰躺，头垂在床沿外面，给勃起的阴茎做深喉，喉咙微微鼓起。一名高大的中国肌肉男人站在床边，双手轻扶她的头。{decorator}人物身份以<image1>为准，面部结构、发型和身体比例保持不变。' },
@@ -201,6 +201,7 @@
         config.seedMode = config.seedMode === 'fixed' ? 'fixed' : 'random';
         if (typeof config.comfyUrl !== 'string') config.comfyUrl = '';
         if (typeof config.workflowTemplate !== 'string') config.workflowTemplate = '';
+        if (typeof config.loraList !== 'string') config.loraList = COMFY_DEFAULTS.loraList;
         config.comfyUrl = config.comfyUrl.trim().replace(/\/+$/, '');
 
         return migrateLegacyConfig(config, savedConfig);
@@ -2116,13 +2117,6 @@
 
     // ---------- 工作流拼装 ----------
 
-    // 名称里带这段的是 NSFW 图像编辑 LoRA，只在全裸提示词上加载
-    const EDIT_LORA_MARK = 'NSFW Image Edit';
-
-    function isEditLoraName(name) {
-        return String(name || '').toLowerCase().includes(EDIT_LORA_MARK.toLowerCase());
-    }
-
     // 每行一条：LoRA名称@强度
     function parseLoraList(loraList) {
         return String(loraList || '')
@@ -2141,46 +2135,9 @@
             .filter((item) => item.name);
     }
 
-    // Qwen-Image-2.1 图像编辑工作流（B18 基础版 + 解锁 UNet + LoRA 链）
-    function lorasForRequest(config, nude) {
-        const loras = parseLoraList(config.loraList);
-        if (nude) return loras;
-        return loras.filter((lora) => !isEditLoraName(lora.name));
-    }
-
-    // 自定义工作流模板里如果写死了 Edit LoRA，非全裸请求也摘掉并把它的 model 输入接回上游
-    function stripEditLoraNodes(workflow) {
-        const removed = new Set();
-        Object.keys(workflow).forEach((id) => {
-            const node = workflow[id];
-            if (!node || node.class_type !== 'LoraLoaderModelOnly') return;
-            if (isEditLoraName(node.inputs && node.inputs.lora_name)) removed.add(String(id));
-        });
-        if (!removed.size) return workflow;
-        const resolve = (ref) => {
-            let current = ref;
-            const seen = new Set();
-            while (Array.isArray(current) && removed.has(String(current[0])) && !seen.has(String(current[0]))) {
-                seen.add(String(current[0]));
-                const node = workflow[current[0]];
-                current = node && node.inputs ? node.inputs.model : current;
-            }
-            return current;
-        };
-        Object.keys(workflow).forEach((id) => {
-            if (removed.has(id)) return;
-            const inputs = workflow[id] && workflow[id].inputs;
-            if (!inputs) return;
-            Object.keys(inputs).forEach((key) => {
-                if (Array.isArray(inputs[key]) && removed.has(String(inputs[key][0]))) {
-                    inputs[key] = resolve(inputs[key]);
-                }
-            });
-        });
-        removed.forEach((id) => {
-            delete workflow[id];
-        });
-        return workflow;
+    // Qwen-Image-2.1 图像编辑工作流（B18 基础版 + 解锁 UNet + 设置里的 LoRA 列表）
+    function lorasForRequest(config) {
+        return parseLoraList(config.loraList);
     }
 
     function buildComfyWorkflow(config, imageName, prompt, seed, loras) {
@@ -2306,12 +2263,8 @@
         }
     }
 
-    function buildWorkflowForRequest(config, imageName, prompt, seed, options = {}) {
-        const nude = !!options.nude;
-        const loras = lorasForRequest(config, nude);
-        if (!nude && parseLoraList(config.loraList).length !== loras.length) {
-            console.log('[Magicwand] 非全裸提示词，不加载 NSFW Image Edit LoRA');
-        }
+    function buildWorkflowForRequest(config, imageName, prompt, seed) {
+        const loras = lorasForRequest(config);
         const template = (config.workflowTemplate || '').trim();
         if (!template) {
             return buildComfyWorkflow(config, imageName, prompt, seed, loras);
@@ -2329,7 +2282,7 @@
             VAE: config.vaeName,
             FILENAME_PREFIX: 'magicwand'
         });
-        return nude ? workflow : stripEditLoraNodes(workflow);
+        return workflow;
     }
 
     // ---------- 客户端预缩放（只影响上传体积，最终尺寸仍由工作流决定） ----------
@@ -2925,7 +2878,7 @@
                 <div class="mw-settings-group">
                     <label class="mw-settings-label">LoRA 列表（每行一条：名称@强度）</label>
                     <textarea class="mw-settings-textarea mw-lora-list"></textarea>
-                    <div class="mw-settings-hint">按顺序串联后接入 ModelAttentionBackend。名称里带 NSFW Image Edit 的 LoRA 只在全裸提示词上加载</div>
+                    <div class="mw-settings-hint">按顺序串联后接入 ModelAttentionBackend。留空则不加载 LoRA</div>
                 </div>
 
                 <div class="mw-settings-section">生成参数</div>

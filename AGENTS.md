@@ -221,5 +221,5 @@ magicwand/
 - Images must be at least 100x100px to be processed
 - 图片编辑走 ComfyUI 原生 API（`/upload/image` → `/prompt` → `/history` → `/view`），不再有自建 MCP `/generate` 中间层
 - `comfyUrl` 必须是 ComfyUI 服务根地址；AutoDL 上 ComfyUI 在 **6006 端口（主机名 `u` 前缀）**，6008 端口（`uu` 前缀）是控制面板，填错会 404
-- 默认工作流为 Qwen-Image-2.1 图像编辑（B18 基础版 + 解锁 UNet + NSFW LoRA 链），模型名随服务器变化，可在设置面板或「高级 → 工作流模板」里替换
+- 默认工作流为 Qwen-Image-2.1 图像编辑（B18 基础版 + 解锁 UNet + 一条 NSFW Image Edit LoRA @1.0），模型名随服务器变化，可在设置面板或「高级 → 工作流模板」里替换
 - 点击的图片会上传到所配置的 ComfyUI 服务器，设置面板里已明示

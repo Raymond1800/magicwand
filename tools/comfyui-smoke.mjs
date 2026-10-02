@@ -45,8 +45,7 @@ const DEFAULTS = {
     clipType: 'qwen_image',
     vae: 'qwen_image_2.1_vae_bf16.safetensors',
     loras: [
-        'qwen/Qwen-Image-2.1 NSFW Image EditV2.safetensors@1.0',
-        'qwen/Qwen-Image-2.1 NSFW Image EditV2.safetensors@0.8'
+        'qwen/Qwen-Image-2.1 NSFW Image EditV2.safetensors@1.0'
     ],
     refResolution: 1024,
     sampler: 'euler',
