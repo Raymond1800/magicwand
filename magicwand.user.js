@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magicwand - 魔法图片编辑
 // @namespace    https://magicwand.ai/
-// @version      1.3.0
+// @version      1.4.0
 // @description  AI图片编辑油猴脚本，支持预置提示词和自定义编辑
 // @author       Magicwand
 // @match        *://*/*
@@ -19,7 +19,7 @@
     'use strict';
 
     // 脚本版本（与 userscript 头部保持一致）
-    const SCRIPT_VERSION = '1.3.0';
+    const SCRIPT_VERSION = '1.4.0';
 
     // ComfyUI 默认工作流配置（Qwen-Image-2.1 图像编辑：B18 基础版 + 解锁 UNet + 一条 Edit LoRA @1.0）
     // 该组合已在目标服务器上通过 /upload/image → /prompt → /history → /view 全链路实测
@@ -469,6 +469,23 @@
                     padding: 4px 0;
                 }
             }
+            .mw-breakdown-btn {
+                display: block;
+                width: 100%;
+                margin-top: 8px;
+                padding: 8px 10px;
+                background: #1f2937;
+                color: #fff;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 12px;
+                font-weight: 600;
+                letter-spacing: 0.04em;
+            }
+            .mw-breakdown-btn:hover {
+                background: #111827;
+            }
             @media (max-width: 339px) {
                 .mw-number-grid {
                     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -658,6 +675,57 @@
             }
             .mw-compare-action-btn:hover {
                 background: rgba(99, 102, 241, 0.9);
+            }
+
+            /* 拆解结果：按视口放大查看，不占用原图位置 */
+            .mw-sheet-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 100010;
+                box-sizing: border-box;
+                padding: 56px 16px 40px;
+                background: rgba(15, 23, 42, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .mw-sheet-stage {
+                width: min(100%, calc(100vh - 112px), calc(100vw - 32px));
+                height: min(100%, calc(100vh - 112px), calc(100vw - 32px));
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                touch-action: none;
+                cursor: grab;
+            }
+            .mw-sheet-stage.is-dragging {
+                cursor: grabbing;
+            }
+            .mw-sheet-image {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                transform-origin: center center;
+                user-select: none;
+                -webkit-user-drag: none;
+            }
+            .mw-sheet-actions {
+                position: absolute;
+                top: 16px;
+                right: 16px;
+                display: flex;
+                gap: 8px;
+            }
+            .mw-sheet-hint {
+                position: absolute;
+                left: 50%;
+                bottom: 16px;
+                transform: translateX(-50%);
+                color: rgba(255, 255, 255, 0.82);
+                font-size: 12px;
+                pointer-events: none;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
             }
 
             /* 设置面板 */
@@ -1402,6 +1470,10 @@
     // 面板外部点击监听用捕获阶段，避免按钮处理器先改 DOM 导致误判为「面板外部」
     const OUTSIDE_CLICK_OPTIONS = { capture: true };
 
+    // 拆解图固定方图输出，不跟随原图比例
+    const BREAKDOWN_OUTPUT_SIZE = 2048;
+    const BREAKDOWN_PROMPT = '以 <image1> 为唯一身份参考，把其中的人物重绘成一张宽幅真人棚拍私密设定图，不是插画。画面主体是同一人物的四张全身裸照，从左到右依次为正面、左侧45度、背面、右侧45度，面容、发型、发色、肤色和体型都与 <image1> 一致，自然皮肤纹理，柔和棚拍光，浅灰背景，四肢完整，无遮挡。四张裸照下方是一排头部表情特写，五官仍与 <image1> 一致，从左到右标注 "微笑" "冷酷" "厌恶" "高潮" ，高潮脸表现为眉心紧皱、双眼微眯、嘴唇张开。画面左侧平铺从 <image1> 服装拆出的外层单品：外套、内搭、下装、鞋和配饰，用细箭头连回对应身体部位。画面右侧标题为 "内层衣物" 的静物区必须摆出三件且不被挡住：一件上身内层衣物、一条下身内层衣物、一双袜子或袜类，款式、颜色和材质按 <image1> 的场合和气质自行设计，作为平铺展示，而不是穿在身上。右下角是三处身体局部特写，分别标注 "胸部" "腰胯" "下身正面" ，皮肤与光影和全身裸照一致。每件衣物旁有短的手写中文注释，只写该件实际材质。光影统一，注释清晰可读。';
+
     function mergeDecoratorsWithPrompt(prompt, decorators) {
         if (!decorators || decorators.length === 0) {
             return prompt.replace(/\{decorator\}/g, '');
@@ -1476,6 +1548,8 @@
             html += `</div>`;
         }
 
+        html += `<button type="button" class="mw-breakdown-btn">拆解 · 2048×2048</button>`;
+
         html += `
             <div class="mw-input-area">
                 <input type="text" class="mw-input" placeholder="输入编辑指令...">
@@ -1493,6 +1567,7 @@
         const sendBtn = panel.querySelector('.mw-send-btn');
         const cancelBtn = panel.querySelector('.mw-cancel-btn');
         const presetBtns = panel.querySelectorAll('.mw-preset-btn');
+        const breakdownBtn = panel.querySelector('.mw-breakdown-btn');
         const numberBtns = panel.querySelectorAll('.mw-number-btn');
         const decoratorBtns = panel.querySelectorAll('.mw-decorator-btn');
 
@@ -1530,6 +1605,15 @@
                 } else {
                     showError(panel, '该编号提示词未配置完整');
                 }
+            });
+        });
+
+        breakdownBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            sendEditRequest(img, BREAKDOWN_PROMPT, panel, btn, {
+                width: BREAKDOWN_OUTPUT_SIZE,
+                height: BREAKDOWN_OUTPUT_SIZE
             });
         });
 
@@ -1954,12 +2038,15 @@
                     if (job.token.cancelled) return;
                     updateProgress(formatProgressText(elapsed, queueRemaining), panel, processingOverlay, videoOverlay);
                 }
-            }, { nude: !!options.nude });
+            }, options);
 
             const newImageUrl = URL.createObjectURL(newImageBlob);
             releaseActiveJob(imgKey);
             closePanel();
-            if (isVideoTarget) {
+            const fixedOutput = Number(options.width) > 0 && Number(options.height) > 0;
+            if (fixedOutput) {
+                showSheetView(newImageUrl, img, btn);
+            } else if (isVideoTarget) {
                 showVideoCompareView(img, originalSrc, newImageUrl, originalSrc, prompt, btn);
             } else {
                 showCompareView(img, originalSrc, newImageUrl, originalSrc, prompt, btn);
@@ -2140,7 +2227,28 @@
         return parseLoraList(config.loraList);
     }
 
-    function buildComfyWorkflow(config, imageName, prompt, seed, loras) {
+    function latentSizeInputs(options) {
+        const width = Number(options && options.width);
+        const height = Number(options && options.height);
+        if (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
+            return { width: Math.round(width), height: Math.round(height), batch_size: 1 };
+        }
+        return null;
+    }
+
+    function applyFixedLatentSize(workflow, options) {
+        const size = latentSizeInputs(options);
+        if (!size) return workflow;
+        Object.keys(workflow).forEach((id) => {
+            const node = workflow[id];
+            if (!node || node.class_type !== 'EmptyLatentImage' || !node.inputs) return;
+            node.inputs.width = size.width;
+            node.inputs.height = size.height;
+        });
+        return workflow;
+    }
+
+    function buildComfyWorkflow(config, imageName, prompt, seed, loras, options) {
         const workflow = {
             '4': {
                 class_type: 'CLIPLoader',
@@ -2170,7 +2278,7 @@
             '36': {
                 class_type: 'EmptyLatentImage',
                 _meta: { title: '空Latent' },
-                inputs: { width: ['41', 0], height: ['41', 1], batch_size: 1 }
+                inputs: latentSizeInputs(options) || { width: ['41', 0], height: ['41', 1], batch_size: 1 }
             },
             '37': {
                 class_type: 'TextEncodeQwenImage21',
@@ -2263,11 +2371,11 @@
         }
     }
 
-    function buildWorkflowForRequest(config, imageName, prompt, seed) {
+    function buildWorkflowForRequest(config, imageName, prompt, seed, options) {
         const loras = lorasForRequest(config);
         const template = (config.workflowTemplate || '').trim();
         if (!template) {
-            return buildComfyWorkflow(config, imageName, prompt, seed, loras);
+            return buildComfyWorkflow(config, imageName, prompt, seed, loras, options);
         }
         const workflow = renderWorkflowTemplate(template, {
             IMAGE: imageName,
@@ -2282,7 +2390,7 @@
             VAE: config.vaeName,
             FILENAME_PREFIX: 'magicwand'
         });
-        return workflow;
+        return applyFixedLatentSize(workflow, options);
     }
 
     // ---------- 客户端预缩放（只影响上传体积，最终尺寸仍由工作流决定） ----------
@@ -2678,6 +2786,156 @@
 
         // 保存原始src以便后续恢复
         originalImg.setAttribute('data-original-src', originalSrc);
+    }
+
+    // 拆解图与原图构图不同，用视口查看层代替原位滑块
+    function showSheetView(newSrc, originalImg, editBtn) {
+        const existing = document.querySelector('.mw-sheet-overlay');
+        if (existing && typeof existing._mwClose === 'function') {
+            existing._mwClose();
+        } else if (existing) {
+            existing.remove();
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'mw-sheet-overlay';
+        overlay.innerHTML = `
+            <div class="mw-sheet-stage">
+                <img class="mw-sheet-image" src="${newSrc}" alt="拆解" draggable="false">
+            </div>
+            <div class="mw-sheet-actions">
+                <button type="button" class="mw-compare-action-btn mw-sheet-reedit">重新编辑</button>
+                <button type="button" class="mw-compare-action-btn mw-sheet-close">关闭</button>
+            </div>
+            <div class="mw-sheet-hint">滚轮或双击缩放，拖动查看</div>
+        `;
+        document.body.appendChild(overlay);
+
+        const stage = overlay.querySelector('.mw-sheet-stage');
+        const image = overlay.querySelector('.mw-sheet-image');
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        const pointers = new Map();
+        let pinch = null;
+
+        function applyTransform() {
+            image.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+        }
+
+        function resetView() {
+            scale = 1;
+            offsetX = 0;
+            offsetY = 0;
+            applyTransform();
+        }
+
+        function zoomAt(clientX, clientY, nextScale) {
+            const rect = stage.getBoundingClientRect();
+            const cx = clientX - rect.left - rect.width / 2;
+            const cy = clientY - rect.top - rect.height / 2;
+            const clamped = Math.min(8, Math.max(1, nextScale));
+            if (clamped === 1) {
+                resetView();
+                return;
+            }
+            const ratio = clamped / scale;
+            offsetX = cx - (cx - offsetX) * ratio;
+            offsetY = cy - (cy - offsetY) * ratio;
+            scale = clamped;
+            applyTransform();
+        }
+
+        function closeSheet() {
+            document.removeEventListener('keydown', onKeyDown);
+            document.body.style.overflow = previousOverflow;
+            overlay.remove();
+            URL.revokeObjectURL(newSrc);
+        }
+
+        function onKeyDown(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeSheet();
+            }
+        }
+
+        overlay.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            zoomAt(e.clientX, e.clientY, scale * (e.deltaY < 0 ? 1.12 : 0.89));
+        }, { passive: false });
+
+        stage.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            if (scale > 1) {
+                resetView();
+            } else {
+                zoomAt(e.clientX, e.clientY, 2.5);
+            }
+        });
+
+        stage.addEventListener('pointerdown', (e) => {
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            stage.setPointerCapture(e.pointerId);
+            if (pointers.size === 2) {
+                const pts = Array.from(pointers.values());
+                pinch = {
+                    dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1,
+                    scale: scale
+                };
+            } else if (pointers.size === 1 && scale > 1) {
+                stage.classList.add('is-dragging');
+            }
+        });
+
+        stage.addEventListener('pointermove', (e) => {
+            if (!pointers.has(e.pointerId)) return;
+            const previous = pointers.get(e.pointerId);
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pointers.size === 2 && pinch) {
+                const pts = Array.from(pointers.values());
+                const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+                const midX = (pts[0].x + pts[1].x) / 2;
+                const midY = (pts[0].y + pts[1].y) / 2;
+                zoomAt(midX, midY, pinch.scale * dist / pinch.dist);
+                pinch.scale = scale;
+                pinch.dist = dist;
+                return;
+            }
+            if (pointers.size === 1 && scale > 1 && previous) {
+                offsetX += e.clientX - previous.x;
+                offsetY += e.clientY - previous.y;
+                applyTransform();
+            }
+        });
+
+        function endPointer(e) {
+            pointers.delete(e.pointerId);
+            if (pointers.size < 2) pinch = null;
+            if (pointers.size === 0) stage.classList.remove('is-dragging');
+        }
+        stage.addEventListener('pointerup', endPointer);
+        stage.addEventListener('pointercancel', endPointer);
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeSheet();
+        });
+        overlay.querySelector('.mw-sheet-close').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeSheet();
+        });
+        overlay.querySelector('.mw-sheet-reedit').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeSheet();
+            showEditPanel(originalImg, editBtn);
+        });
+        overlay._mwClose = closeSheet;
+        document.addEventListener('keydown', onKeyDown);
     }
 
     function showVideoCompareView(video, originalSrc, newSrc, oldSrc, prompt, editBtn) {
