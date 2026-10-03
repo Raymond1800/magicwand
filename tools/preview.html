@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>提示词预览</title>
+<style>
+    :root {
+        color-scheme: light;
+        --ink: #0f172a;
+        --muted: #475569;
+        --line: #e2e8f0;
+        --bg: #f8fafc;
+        --card: #fff;
+        --accent: #1e293b;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font: 14px/1.5 system-ui, "Noto Sans SC", "PingFang SC", sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+    }
+    body.light-open { overflow: hidden; }
+    header, main, footer { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 28px 0 8px; }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    h2 { margin: 0; font-size: 16px; }
+    h3 { margin: 0; font-size: 14px; }
+    p { margin: 0; }
+    header p, footer, .hint { color: var(--muted); }
+    footer { padding: 8px 0 180px; font-size: 12px; }
+    section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        margin: 12px 0;
+    }
+    .fields { display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; align-items: center; }
+    label.field { color: var(--muted); }
+    input[type="text"], input[type="number"], textarea, select {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: inherit;
+        color: inherit;
+        background: #fff;
+    }
+    textarea { min-height: 72px; resize: vertical; }
+    input[type="number"] { max-width: 120px; }
+    .server-row, .nums { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .server-row input { flex: 1; min-width: 180px; }
+    .check-line { display: flex; gap: 8px; align-items: center; }
+    details { margin-top: 8px; }
+    summary { cursor: pointer; color: var(--muted); }
+    .source { display: grid; grid-template-columns: 1fr 180px; gap: 12px; align-items: stretch; }
+    .drop {
+        border: 1px dashed #94a3b8;
+        border-radius: 12px;
+        background: #fff;
+        min-height: 140px;
+        color: var(--muted);
+        cursor: pointer;
+        font: inherit;
+    }
+    .drop.over { border-color: var(--accent); background: #eef2ff; color: var(--ink); }
+    .shot {
+        margin: 0;
+        border-radius: 12px;
+        background: #0f172a;
+        min-height: 140px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    .shot img { width: 100%; height: 120px; object-fit: contain; }
+    .shot figcaption { color: #cbd5e1; font-size: 12px; padding: 6px 8px; text-align: center; }
+    .actions {
+        position: fixed;
+        z-index: 5;
+        left: 50%;
+        bottom: 12px;
+        transform: translateX(-50%);
+        width: min(1080px, calc(100% - 24px));
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    }
+    button {
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: var(--ink);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font: inherit;
+        cursor: pointer;
+    }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    #startBtn { background: var(--accent); color: #fff; border-color: var(--accent); }
+    #status, #busyNote { flex: 1 1 220px; color: var(--muted); }
+    .run-pick { display: flex; gap: 8px; align-items: center; color: var(--muted); min-width: 220px; }
+    .catalog-head, .group-head, .deco-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .chips, .checks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); }
+    .chip { border-radius: 999px; padding: 4px 10px; }
+    .chip[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .check { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+    .group + .group { margin-top: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
+    .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: pointer;
+        padding: 0;
+        text-align: left;
+    }
+    .card[data-status="running"] { border-color: #6366f1; }
+    .card[data-status="error"], .card[data-status="interrupted"] { border-color: #fca5a5; }
+    .card[data-status="done"] { border-color: #86efac; }
+    .thumb {
+        aspect-ratio: 3 / 4;
+        background: #0f172a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .thumb img { width: 100%; height: 100%; object-fit: contain; }
+    .mark { color: #e2e8f0; font-size: 13px; }
+    .meta { padding: 8px 10px 10px; display: grid; gap: 2px; }
+    .name { font-size: 13px; }
+    .state { color: var(--muted); font-size: 12px; word-break: break-word; }
+    .tag { color: #64748b; font-size: 11px; }
+    #empty { padding: 28px 8px; text-align: center; }
+    .light {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        background: rgba(15, 23, 42, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 56px 16px 40px;
+    }
+    .light[hidden] { display: none; }
+    .light-panel {
+        width: min(1100px, 100%);
+        max-height: 100%;
+        overflow: auto;
+        background: #fff;
+        color: var(--ink);
+        border-radius: 12px;
+        padding: 12px 14px 16px;
+    }
+    .light-bar { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    #light-prompt { margin-top: 8px; white-space: pre-wrap; color: var(--muted); font-size: 12px; }
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .compare figure { margin: 0; }
+    .compare figcaption { margin-bottom: 6px; }
+    .compare img { width: 100%; max-height: 68vh; object-fit: contain; background: #0f172a; }
+    .light.sheet .light-panel {
+        width: min(100%, calc(100vw - 32px));
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: transparent;
+        color: #e2e8f0;
+        overflow: hidden;
+        padding: 0;
+    }
+    .light.sheet .light-bar,
+    .light.sheet #light-state,
+    .light.sheet #light-prompt,
+    .light.sheet .stage {
+        width: min(calc(100vh - 210px), calc(100vw - 32px));
+        flex: none;
+    }
+    .light.sheet #light-prompt { max-height: 4.5em; overflow: auto; }
+    .light.sheet #light-close { background: #fff; color: var(--ink); }
+    .stage {
+        height: min(calc(100vh - 210px), calc(100vw - 32px));
+        margin: 8px auto 0;
+        overflow: hidden;
+        touch-action: none;
+        cursor: grab;
+        background: #020617;
+    }
+    .stage.zoomed { cursor: grab; }
+    .stage.dragging { cursor: grabbing; }
+    .stage img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        transform-origin: 0 0;
+        user-select: none;
+        pointer-events: none;
+    }
+    @media (max-width: 700px) {
+        .fields, .source, .compare { grid-template-columns: 1fr; }
+        input[type="number"] { max-width: none; }
+        .actions { bottom: max(8px, env(safe-area-inset-bottom)); }
+    }
+</style>
+</head>
+<body>
+<header>
+    <h1>提示词预览</h1>
+    <p id="lead">读取当前脚本里的提示词，串行调用 ComfyUI。</p>
+</header>
+<main>
+    <section>
+        <h2>连接</h2>
+        <div class="fields" style="margin-top:12px">
+            <span class="field">地址</span>
+            <div class="server-row">
+                <input id="server" type="text" spellcheck="false" placeholder="https://host:8443" autocomplete="off">
+                <button type="button" id="testBtn">测试连接</button>
+            </div>
+            <span class="field">密钥</span>
+            <input id="apiKey" type="text" spellcheck="false" placeholder="可选，Bearer" autocomplete="off">
+            <span class="field">证书</span>
+            <label class="check-line"><input id="insecure" type="checkbox" checked> 跳过 TLS 校验（AutoDL 自签证书需要）</label>
+            <span class="field">步数</span>
+            <div class="nums">
+                <input id="steps" type="number" min="1" step="1">
+                <span class="field">百万像素</span>
+                <input id="megapixels" type="number" min="0.1" step="0.1">
+                <span class="field">超时（秒）</span>
+                <input id="timeout" type="number" min="1" step="1">
+            </div>
+            <span class="field">LoRA</span>
+            <textarea id="loraList" spellcheck="false" placeholder="每行 文件名@强度，留空则不加载"></textarea>
+        </div>
+        <details>
+            <summary>模型文件</summary>
+            <div class="fields" style="margin-top:10px">
+                <span class="field">UNet</span>
+                <input id="unetName" type="text" spellcheck="false">
+                <span class="field">CLIP</span>
+                <input id="clipName" type="text" spellcheck="false">
+                <span class="field">VAE</span>
+                <input id="vaeName" type="text" spellcheck="false">
+            </div>
+        </details>
+    </section>
+
+    <section class="source">
+        <button type="button" id="drop" class="drop">把照片拖到这里，或点此选择</button>
+        <input id="file" type="file" accept="image/*" hidden>
+        <figure class="shot">
+            <img id="preview" alt="原图预览" hidden>
+            <figcaption id="fileName">还没有照片</figcaption>
+        </figure>
+    </section>
+
+    <div class="actions">
+        <button type="button" id="startBtn">开始（0）</button>
+        <button type="button" id="cancelBtn" disabled>取消</button>
+        <button type="button" id="retryBtn" disabled>只重跑失败</button>
+        <label class="run-pick">运行
+            <select id="runSelect"></select>
+        </label>
+        <p id="status"></p>
+        <p id="busyNote" hidden></p>
+    </div>
+
+    <section>
+        <div class="catalog-head">
+            <h2>提示词</h2>
+            <div>
+                <button type="button" id="checkAll">全选</button>
+                <button type="button" id="checkNone">全不选</button>
+            </div>
+        </div>
+        <div class="deco-head" style="margin-top:14px">
+            <h3>装饰</h3>
+        </div>
+        <p id="decoratorNote" class="hint"></p>
+        <div id="decorators" class="chips"></div>
+        <div id="groups"></div>
+    </section>
+
+    <section>
+        <h2>结果</h2>
+        <p id="empty">还没有结果。选好照片和提示词后点开始。</p>
+        <div id="grid" class="grid"></div>
+    </section>
+</main>
+<footer>结果写在 <code>tools/preview-out/&lt;时间&gt;/</code>，同目录有 manifest.json。服务只监听 127.0.0.1。</footer>
+
+<div id="light" class="light" hidden>
+    <div class="light-panel">
+        <div class="light-bar">
+            <strong id="light-title"></strong>
+            <button type="button" id="light-close">关闭</button>
+        </div>
+        <p id="light-state" class="hint"></p>
+        <p id="light-prompt"></p>
+        <div id="light-view"></div>
+    </div>
+</div>
+
+<script>
+    let catalog = null;
+    let current = null;
+    let activeId = '';
+    let chosenFile = null;
+    let previewUrl = '';
+    let renderedRunId = '';
+    let pollTimer = null;
+
+    function setStatus(text) {
+        document.getElementById('status').textContent = text || '';
+    }
+
+    function currentSettings() {
+        return {
+            server: document.getElementById('server').value.trim(),
+            apiKey: document.getElementById('apiKey').value,
+            insecure: document.getElementById('insecure').checked,
+            steps: Number(document.getElementById('steps').value),
+            megapixels: Number(document.getElementById('megapixels').value),
+            timeout: Number(document.getElementById('timeout').value),
+            loraList: document.getElementById('loraList').value,
+            unetName: document.getElementById('unetName').value.trim(),
+            clipName: document.getElementById('clipName').value.trim(),
+            vaeName: document.getElementById('vaeName').value.trim()
+        };
+    }
+
+    function fillSettings(saved, defaults) {
+        document.getElementById('server').value = saved.server || '';
+        document.getElementById('apiKey').value = saved.apiKey || '';
+        document.getElementById('insecure').checked = saved.insecure !== false;
+        document.getElementById('steps').value = saved.steps || defaults.steps;
+        document.getElementById('megapixels').value = saved.megapixels || defaults.megapixels;
+        document.getElementById('timeout').value = saved.timeout || defaults.timeout;
+        document.getElementById('loraList').value = typeof saved.loraList === 'string' ? saved.loraList : (defaults.loraList || '');
+        document.getElementById('unetName').value = saved.unetName || defaults.unetName || '';
+        document.getElementById('clipName').value = saved.clipName || defaults.clipName || '';
+        document.getElementById('vaeName').value = saved.vaeName || defaults.vaeName || '';
+    }
+
+    function selectedJobIds() {
+        return [...document.querySelectorAll('.job:checked')].map((box) => box.value);
+    }
+
+    function selectedDecoratorIds() {
+        return [...document.querySelectorAll('.chip[aria-pressed="true"]')].map((btn) => btn.dataset.id);
+    }
+
+    function updateStartLabel() {
+        document.getElementById('startBtn').textContent = `开始（${selectedJobIds().length}）`;
+    }
+
+    function updateDecoratorNote() {
+        const count = selectedDecoratorIds().length;
+        document.getElementById('decoratorNote').textContent = count
+            ? `已选 ${count} 个。会插入带 {decorator} 的提示词，拆解不使用装饰。`
+            : '默认不选。只插入带 {decorator} 的提示词，拆解不使用装饰。';
+    }
+
+    function syncGroup(section) {
+        const boxes = [...section.querySelectorAll('.job')];
+        const toggle = section.querySelector('.group-toggle');
+        const count = boxes.filter((box) => box.checked).length;
+        toggle.checked = count === boxes.length;
+        toggle.indeterminate = count > 0 && count < boxes.length;
+    }
+
+    function setAllJobs(on) {
+        document.querySelectorAll('.job').forEach((box) => { box.checked = on; });
+        document.querySelectorAll('.group-toggle').forEach((box) => {
+            box.checked = on;
+            box.indeterminate = false;
+        });
+        updateStartLabel();
+    }
+
+    function renderCatalog(data) {
+        const decoRoot = document.getElementById('decorators');
+        const groupRoot = document.getElementById('groups');
+        decoRoot.replaceChildren();
+        groupRoot.replaceChildren();
+        data.decorators.forEach((item) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'chip';
+            btn.dataset.id = item.id;
+            btn.textContent = item.name;
+            btn.title = item.prompt;
+            btn.setAttribute('aria-pressed', 'false');
+            btn.addEventListener('click', () => {
+                const on = btn.getAttribute('aria-pressed') !== 'true';
+                btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+                updateDecoratorNote();
+            });
+            decoRoot.appendChild(btn);
+        });
+        data.groups.forEach((group) => {
+            const section = document.createElement('div');
+            section.className = 'group';
+            const head = document.createElement('div');
+            head.className = 'group-head';
+            const title = document.createElement('h3');
+            title.textContent = `${group.title} · ${group.items.length}`;
+            const label = document.createElement('label');
+            label.className = 'check-line';
+            const toggle = document.createElement('input');
+            toggle.type = 'checkbox';
+            toggle.className = 'group-toggle';
+            toggle.checked = true;
+            const span = document.createElement('span');
+            span.textContent = '全选';
+            label.append(toggle, span);
+            head.append(title, label);
+            const list = document.createElement('div');
+            list.className = 'checks';
+            group.items.forEach((item) => {
+                const itemLabel = document.createElement('label');
+                itemLabel.className = 'check';
+                itemLabel.title = item.prompt;
+                const box = document.createElement('input');
+                box.type = 'checkbox';
+                box.className = 'job';
+                box.value = item.id;
+                box.checked = true;
+                box.addEventListener('change', () => {
+                    syncGroup(section);
+                    updateStartLabel();
+                });
+                const name = document.createElement('span');
+                name.textContent = item.name;
+                itemLabel.append(box, name);
+                list.appendChild(itemLabel);
+            });
+            toggle.addEventListener('change', () => {
+                list.querySelectorAll('.job').forEach((box) => { box.checked = toggle.checked; });
+                toggle.indeterminate = false;
+                updateStartLabel();
+            });
+            section.append(head, list);
+            groupRoot.appendChild(section);
+        });
+        updateStartLabel();
+        updateDecoratorNote();
+    }
+
+    function groupTitle(id) {
+        const group = catalog && catalog.groups.find((item) => item.id === id);
+        return group ? group.title : '';
+    }
+
+    function stateText(job) {
+        if (job.status === 'queued') return '排队';
+        if (job.status === 'running') {
+            const elapsed = Math.round(Number(job.elapsed) || 0);
+            const queue = Number.isFinite(Number(job.queueRemaining)) ? ` · 队列剩余 ${job.queueRemaining}` : '';
+            return `生成中 · ${elapsed}s${queue}`;
+        }
+        if (job.status === 'done') return `完成 · ${(Number(job.ms) / 1000).toFixed(1)}s`;
+        if (job.status === 'cancelled') return '已取消';
+        return job.error || '失败';
+    }
+
+    function markText(status) {
+        if (status === 'running') return '生成中';
+        if (status === 'error') return '失败';
+        if (status === 'cancelled') return '已取消';
+        if (status === 'interrupted') return '已中断';
+        return '排队';
+    }
+
+    function fileUrl(job) {
+        return `/api/runs/${encodeURIComponent(current.id)}/files/${encodeURIComponent(job.file)}`;
+    }
+
+    function sourceUrl() {
+        return `/api/runs/${encodeURIComponent(current.id)}/source`;
+    }
+
+    function updateCard(card, job) {
+        card.dataset.status = job.status || '';
+        card.querySelector('.name').textContent = job.name || '';
+        let tag = card.querySelector('.tag');
+        if (!tag) {
+            tag = document.createElement('span');
+            tag.className = 'tag';
+            card.querySelector('.meta').prepend(tag);
+        }
+        tag.textContent = groupTitle(job.group);
+        card.querySelector('.state').textContent = stateText(job);
+        const thumb = card.querySelector('.thumb');
+        if (job.status === 'done' && job.file) {
+            const src = fileUrl(job);
+            let img = thumb.querySelector('img');
+            if (!img) {
+                thumb.replaceChildren();
+                img = document.createElement('img');
+                img.alt = '';
+                thumb.appendChild(img);
+            }
+            if (img.getAttribute('src') !== src) img.src = src;
+            return;
+        }
+        let mark = thumb.querySelector('.mark');
+        if (!mark) {
+            thumb.replaceChildren();
+            mark = document.createElement('span');
+            mark.className = 'mark';
+            thumb.appendChild(mark);
+        }
+        mark.textContent = markText(job.status);
+    }
+
+    function renderJobs(manifest) {
+        const grid = document.getElementById('grid');
+        const empty = document.getElementById('empty');
+        if (!manifest || !Array.isArray(manifest.jobs) || !manifest.jobs.length) {
+            grid.replaceChildren();
+            empty.hidden = false;
+            renderedRunId = '';
+            return;
+        }
+        empty.hidden = true;
+        if (renderedRunId !== manifest.id) {
+            grid.replaceChildren();
+            renderedRunId = manifest.id;
+        }
+        const seen = new Set();
+        manifest.jobs.forEach((job) => {
+            seen.add(job.id);
+            let card = [...grid.children].find((el) => el.dataset.id === job.id);
+            if (!card) {
+                card = document.createElement('article');
+                card.className = 'card';
+                card.tabIndex = 0;
+                card.dataset.id = job.id;
+                const thumb = document.createElement('div');
+                thumb.className = 'thumb';
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                const name = document.createElement('strong');
+                name.className = 'name';
+                const state = document.createElement('span');
+                state.className = 'state';
+                meta.append(name, state);
+                card.append(thumb, meta);
+                const jobId = job.id;
+                const open = () => {
+                    const found = current && current.jobs.find((item) => item.id === jobId);
+                    if (found) openJob(found);
+                };
+                card.addEventListener('click', open);
+                card.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        open();
+                    }
+                });
+                grid.appendChild(card);
+            }
+            updateCard(card, job);
+        });
+        [...grid.children].forEach((card) => {
+            if (!seen.has(card.dataset.id)) card.remove();
+        });
+    }
+
+    function showRunSource(manifest) {
+        if (chosenFile || !manifest || !manifest.source) return;
+        const img = document.getElementById('preview');
+        img.src = `/api/runs/${encodeURIComponent(manifest.id)}/source`;
+        img.hidden = false;
+        document.getElementById('fileName').textContent = '这次运行的原图';
+    }
+
+    function updateActions() {
+        const busy = Boolean(activeId);
+        const retryable = current && current.jobs.some((job) => job.status === 'error' || job.status === 'cancelled' || job.status === 'interrupted');
+        document.getElementById('cancelBtn').disabled = !busy;
+        document.getElementById('retryBtn').disabled = busy || !retryable;
+        document.getElementById('startBtn').disabled = busy;
+        const note = document.getElementById('busyNote');
+        if (activeId && (!current || current.id !== activeId)) {
+            note.hidden = false;
+            note.textContent = `另一批 ${activeId} 正在运行`;
+        } else {
+            note.hidden = true;
+            note.textContent = '';
+        }
+        if (!busy) updateStartLabel();
+    }
+
+    function schedulePoll() {
+        clearTimeout(pollTimer);
+        const viewingLive = current && current.jobs.some((job) => job.status === 'queued' || job.status === 'running');
+        if (!viewingLive && !activeId) return;
+        pollTimer = setTimeout(async () => {
+            try {
+                if (current && current.jobs.some((job) => job.status === 'queued' || job.status === 'running')) {
+                    await loadRun(current.id);
+                } else {
+                    await refreshRuns(current && current.id);
+                    schedulePoll();
+                }
+            } catch (error) {
+                setStatus(error.message || '刷新失败');
+                schedulePoll();
+            }
+        }, 1000);
+    }
+
+    async function refreshRuns(selectId) {
+        const response = await fetch('/api/runs');
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '读不到运行列表');
+        activeId = data.activeId || '';
+        const select = document.getElementById('runSelect');
+        const keep = selectId || select.value;
+        select.replaceChildren();
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = data.runs.length ? '选择一次运行' : '还没有运行';
+        select.appendChild(placeholder);
+        data.runs.forEach((run) => {
+            const option = document.createElement('option');
+            option.value = run.id;
+            const fail = run.failed ? ` · 未成功 ${run.failed}` : '';
+            option.textContent = `${run.id} · ${run.done}/${run.total}${fail}`;
+            select.appendChild(option);
+        });
+        if (keep && [...select.options].some((option) => option.value === keep)) select.value = keep;
+        updateActions();
+    }
+
+    async function loadRun(id) {
+        const response = await fetch(`/api/runs/${encodeURIComponent(id)}`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || '读不到这次运行');
+        current = payload;
+        const select = document.getElementById('runSelect');
+        if ([...select.options].some((option) => option.value === id)) select.value = id;
+        renderJobs(current);
+        showRunSource(current);
+        updateActions();
+        schedulePoll();
+    }
+
+    function readDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('读取照片失败'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function setFile(file) {
+        if (!file || !String(file.type || '').startsWith('image/')) {
+            setStatus('请选择图片文件');
+            return;
+        }
+        chosenFile = file;
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        previewUrl = URL.createObjectURL(file);
+        const img = document.getElementById('preview');
+        img.src = previewUrl;
+        img.hidden = false;
+        document.getElementById('fileName').textContent = file.name;
+        setStatus('');
+    }
+
+    async function startRun() {
+        const settings = currentSettings();
+        if (!settings.server) {
+            setStatus('先填写 ComfyUI 地址');
+            return;
+        }
+        if (!chosenFile) {
+            setStatus('先选择一张照片');
+            return;
+        }
+        const jobIds = selectedJobIds();
+        if (!jobIds.length) {
+            setStatus('先选择至少一条提示词');
+            return;
+        }
+        document.getElementById('startBtn').disabled = true;
+        setStatus('正在提交…');
+        try {
+            const imageBase64 = await readDataUrl(chosenFile);
+            const response = await fetch('/api/runs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...settings,
+                    imageBase64,
+                    filename: chosenFile.name,
+                    jobIds,
+                    decoratorIds: selectedDecoratorIds()
+                })
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.error || '提交失败');
+            activeId = payload.id;
+            await refreshRuns(payload.id);
+            await loadRun(payload.id);
+            setStatus(`已开始 ${payload.id}，共 ${payload.jobs.length} 张`);
+        } catch (error) {
+            setStatus(error.message || '提交失败');
+            updateActions();
+        }
+    }
+
+    async function cancelRun() {
+        const response = await fetch('/api/cancel', { method: 'POST' });
+        const payload = await response.json();
+        if (!response.ok) {
+            setStatus(payload.error || '取消失败');
+            return;
+        }
+        setStatus('正在取消，当前这张结束后停止');
+    }
+
+    async function retryFailed() {
+        if (!current) return;
+        document.getElementById('retryBtn').disabled = true;
+        setStatus('正在重跑失败项…');
+        try {
+            const response = await fetch(`/api/runs/${encodeURIComponent(current.id)}/retry`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}'
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.error || '重跑失败');
+            activeId = payload.id;
+            await refreshRuns(payload.id);
+            await loadRun(payload.id);
+            setStatus(`已重跑 ${payload.jobs.length} 张`);
+        } catch (error) {
+            setStatus(error.message || '重跑失败');
+            updateActions();
+        }
+    }
+
+    function closeLight() {
+        const light = document.getElementById('light');
+        light.hidden = true;
+        light.classList.remove('sheet');
+        document.body.classList.remove('light-open');
+        document.getElementById('light-view').replaceChildren();
+    }
+
+    function figure(caption, src) {
+        const fig = document.createElement('figure');
+        const cap = document.createElement('figcaption');
+        cap.textContent = caption;
+        const img = document.createElement('img');
+        img.alt = caption;
+        img.src = src;
+        fig.append(cap, img);
+        return fig;
+    }
+
+    function bindZoom(stage, img) {
+        let scale = 1;
+        let x = 0;
+        let y = 0;
+        const pointers = new Map();
+        let pinchDist = 0;
+        function apply() {
+            img.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+            stage.classList.toggle('zoomed', scale > 1);
+        }
+        function zoomAt(mx, my, factor) {
+            const next = Math.min(8, Math.max(1, scale * factor));
+            if (Math.abs(next - scale) < 0.001) return;
+            const ratio = next / scale;
+            x = mx - ratio * (mx - x);
+            y = my - ratio * (my - y);
+            scale = next;
+            if (scale === 1) {
+                x = 0;
+                y = 0;
+            }
+            apply();
+        }
+        stage.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const rect = stage.getBoundingClientRect();
+            zoomAt(event.clientX - rect.left, event.clientY - rect.top, Math.exp(-event.deltaY * 0.0015));
+        }, { passive: false });
+        stage.addEventListener('dblclick', (event) => {
+            const rect = stage.getBoundingClientRect();
+            if (scale > 1.01) {
+                scale = 1;
+                x = 0;
+                y = 0;
+                apply();
+                return;
+            }
+            zoomAt(event.clientX - rect.left, event.clientY - rect.top, 2.5);
+        });
+        stage.addEventListener('pointerdown', (event) => {
+            stage.setPointerCapture(event.pointerId);
+            pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+            if (pointers.size === 2) {
+                const [a, b] = [...pointers.values()];
+                pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+            }
+            if (scale > 1) stage.classList.add('dragging');
+        });
+        stage.addEventListener('pointermove', (event) => {
+            const prev = pointers.get(event.pointerId);
+            if (!prev) return;
+            if (pointers.size >= 2) {
+                pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+                const [a, b] = [...pointers.values()];
+                const dist = Math.hypot(a.x - b.x, a.y - b.y);
+                if (pinchDist > 0) {
+                    const rect = stage.getBoundingClientRect();
+                    zoomAt(rect.width / 2, rect.height / 2, dist / pinchDist);
+                }
+                pinchDist = dist;
+                return;
+            }
+            if (scale > 1) {
+                x += event.clientX - prev.x;
+                y += event.clientY - prev.y;
+                apply();
+            }
+            pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        });
+        const endPointer = (event) => {
+            pointers.delete(event.pointerId);
+            pinchDist = 0;
+            if (pointers.size < 2) stage.classList.remove('dragging');
+        };
+        stage.addEventListener('pointerup', endPointer);
+        stage.addEventListener('pointercancel', endPointer);
+    }
+
+    function openJob(job) {
+        const light = document.getElementById('light');
+        document.getElementById('light-title').textContent = job.name || '';
+        const bits = [stateText(job)];
+        if (job.seed != null) bits.push(`seed ${job.seed}`);
+        document.getElementById('light-state').textContent = bits.join(' · ');
+        document.getElementById('light-prompt').textContent = job.prompt || '';
+        const view = document.getElementById('light-view');
+        view.replaceChildren();
+        const sheet = job.group === 'breakdown' && job.file;
+        light.classList.toggle('sheet', Boolean(sheet));
+        if (sheet) {
+            const stage = document.createElement('div');
+            stage.className = 'stage';
+            const img = document.createElement('img');
+            img.alt = job.name || '';
+            img.src = fileUrl(job);
+            stage.appendChild(img);
+            view.appendChild(stage);
+            bindZoom(stage, img);
+        } else if (job.file) {
+            const compare = document.createElement('div');
+            compare.className = 'compare';
+            compare.append(figure('原图', sourceUrl()), figure('结果', fileUrl(job)));
+            view.appendChild(compare);
+        }
+        light.hidden = false;
+        document.body.classList.add('light-open');
+        document.getElementById('light-close').focus();
+    }
+
+    document.getElementById('checkAll').addEventListener('click', () => setAllJobs(true));
+    document.getElementById('checkNone').addEventListener('click', () => setAllJobs(false));
+    document.getElementById('testBtn').addEventListener('click', async () => {
+        if (!currentSettings().server) {
+            setStatus('先填写 ComfyUI 地址');
+            return;
+        }
+        setStatus('正在连接…');
+        try {
+            const response = await fetch('/api/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentSettings())
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.error || '连接失败');
+            setStatus(`已连接 ${payload.device} · ComfyUI ${payload.version}`);
+        } catch (error) {
+            setStatus(error.message || '连接失败');
+        }
+    });
+    document.getElementById('startBtn').addEventListener('click', () => {
+        startRun();
+    });
+    document.getElementById('cancelBtn').addEventListener('click', () => {
+        cancelRun();
+    });
+    document.getElementById('retryBtn').addEventListener('click', () => {
+        retryFailed();
+    });
+    document.getElementById('runSelect').addEventListener('change', async (event) => {
+        if (!event.target.value) return;
+        try {
+            await loadRun(event.target.value);
+        } catch (error) {
+            setStatus(error.message || '读不到这次运行');
+        }
+    });
+    const drop = document.getElementById('drop');
+    const fileInput = document.getElementById('file');
+    drop.addEventListener('click', () => fileInput.click());
+    drop.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        drop.classList.add('over');
+    });
+    drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+    drop.addEventListener('drop', (event) => {
+        event.preventDefault();
+        drop.classList.remove('over');
+        const file = event.dataTransfer.files && event.dataTransfer.files[0];
+        if (file) setFile(file);
+    });
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+    document.addEventListener('dragover', (event) => event.preventDefault());
+    document.addEventListener('drop', (event) => event.preventDefault());
+    document.getElementById('light-close').addEventListener('click', closeLight);
+    document.getElementById('light').addEventListener('click', (event) => {
+        if (event.target.id === 'light') closeLight();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !document.getElementById('light').hidden) closeLight();
+    });
+
+    async function init() {
+        const response = await fetch('/api/catalog');
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '读不到提示词');
+        catalog = data;
+        fillSettings(data.saved || {}, data.defaults || {});
+        renderCatalog(data);
+        const total = data.groups.reduce((sum, group) => sum + group.items.length, 0);
+        document.getElementById('lead').textContent = `读取当前脚本里的提示词，串行调用 ComfyUI。全部勾选是 ${total} 张。刷新只回看结果，不会自动续跑。`;
+        await refreshRuns();
+        const first = [...document.getElementById('runSelect').options].map((option) => option.value).find(Boolean);
+        const id = activeId || first;
+        if (id) await loadRun(id);
+    }
+
+    init().catch((error) => setStatus(error.message || '页面初始化失败'));
+</script>
+</body>
+</html>

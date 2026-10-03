@@ -11,11 +11,13 @@
  *        --prompt "把她的上衣换成红色" --steps 25 --megapixels 1.5
  *
  * 依赖：Node 18+（内置 fetch / FormData / Blob），无第三方依赖。
- * 注意：这里的工作流结构需要与 magicwand.user.js 的 buildComfyWorkflow() 保持一致。
+ * 工作流拼装在 tools/comfy-workflow.mjs，需与 magicwand.user.js 的 buildComfyWorkflow() 保持一致。
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import { buildWorkflow, randomSeed } from './comfy-workflow.mjs';
+import { downloadImage, getSystemStats, queuePrompt, uploadImage, waitForImage } from './comfy-client.mjs';
 
 // 无参数时使用的占位图（512x768 示意人像），仅用于验证链路是否通畅
 const PLACEHOLDER_PNG_BASE64 =
@@ -138,105 +140,6 @@ function parseArgs(argv) {
     return options;
 }
 
-function parseLoraList(loraList) {
-    return loraList
-        .map((line) => String(line || '').trim())
-        .filter(Boolean)
-        .map((line) => {
-            const at = line.lastIndexOf('@');
-            if (at <= 0) return { name: line, strength: 1 };
-            const strength = Number(line.slice(at + 1));
-            return { name: line.slice(0, at).trim(), strength: Number.isFinite(strength) ? strength : 1 };
-        });
-}
-
-function buildWorkflow(options, imageName, prompt, seed) {
-    const workflow = {
-        '4': {
-            class_type: 'CLIPLoader',
-            inputs: { clip_name: options.clip, type: options.clipType, device: 'default' }
-        },
-        '13': { class_type: 'VAELoader', inputs: { vae_name: options.vae } },
-        '38': { class_type: 'LoadImage', inputs: { image: imageName } },
-        '40': {
-            class_type: 'ImageScaleToTotalPixels',
-            inputs: { upscale_method: 'lanczos', megapixels: options.megapixels, resolution_steps: 1, image: ['38', 0] }
-        },
-        '41': { class_type: 'GetImageSize', inputs: { image: ['40', 0] } },
-        '36': {
-            class_type: 'EmptyLatentImage',
-            inputs: { width: ['41', 0], height: ['41', 1], batch_size: 1 }
-        },
-        '37': {
-            class_type: 'TextEncodeQwenImage21',
-            inputs: {
-                prompt: prompt,
-                negative_prompt: '',
-                resolution: options.refResolution,
-                clip: ['4', 0],
-                'images.image_1': ['40', 0],
-                vae: ['13', 0]
-            }
-        },
-        '5': { class_type: 'UNETLoader', inputs: { unet_name: options.unet, weight_dtype: 'default' } },
-        '25': { class_type: 'VAEDecode', inputs: { samples: ['23', 0], vae: ['13', 0] } },
-        '9': { class_type: 'SaveImage', inputs: { filename_prefix: 'magicwand-smoke', images: ['25', 0] } }
-    };
-
-    let modelRef = ['5', 0];
-    parseLoraList(options.loras).forEach((lora, index) => {
-        const nodeId = `lora_${index}`;
-        workflow[nodeId] = {
-            class_type: 'LoraLoaderModelOnly',
-            inputs: { lora_name: lora.name, strength_model: lora.strength, model: modelRef }
-        };
-        modelRef = [nodeId, 0];
-    });
-
-    workflow['39'] = {
-        class_type: 'ModelAttentionBackend',
-        inputs: { attention: 'comfy kitchen attention', model: modelRef }
-    };
-    workflow['23'] = {
-        class_type: 'KSampler',
-        inputs: {
-            seed: seed,
-            steps: options.steps,
-            cfg: options.cfg,
-            sampler_name: options.sampler,
-            scheduler: options.scheduler,
-            denoise: 1.0,
-            model: ['39', 0],
-            positive: ['37', 0],
-            negative: ['37', 1],
-            latent_image: ['36', 0]
-        }
-    };
-    return workflow;
-}
-
-function formatComfyError(payload, fallback) {
-    if (!payload || typeof payload !== 'object') return fallback;
-    const parts = [];
-    if (payload.error && payload.error.message) parts.push(payload.error.message);
-    Object.keys(payload.node_errors || {}).forEach((nodeId) => {
-        const info = payload.node_errors[nodeId] || {};
-        (info.errors || []).forEach((item) => {
-            parts.push(`节点 ${nodeId}${info.class_type ? ` [${info.class_type}]` : ''}: ${item.message}${item.details ? `（${item.details}）` : ''}`);
-        });
-    });
-    return parts.length ? parts.join('；') : fallback;
-}
-
-// ComfyUI 的 seed 是 64 位整数，这里取 52 位保证 JS Number 精度不丢
-function randomSeed() {
-    return Number(randomBytes(8).readBigUInt64BE() >> 12n);
-}
-
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function readInputImage(imagePath) {
     if (imagePath) {
         const buffer = await readFile(imagePath);
@@ -269,88 +172,48 @@ async function main() {
     const server = options.server.replace(/\/+$/, '');
     const startedAt = Date.now();
 
-    // 1) 连通性
-    const statsResponse = await fetch(`${server}/system_stats`);
-    if (!statsResponse.ok) {
-        throw new Error(`连接 ${server}/system_stats 失败：HTTP ${statsResponse.status}`);
-    }
-    const stats = await statsResponse.json();
-    const device = stats.devices && stats.devices[0] ? stats.devices[0].name : '未知设备';
-    console.log(`[1/5] 连接成功：ComfyUI ${stats.system ? stats.system.comfyui_version : '?'} · ${device}`);
+    const stats = await getSystemStats(server);
+    console.log(`[1/5] 连接成功：ComfyUI ${stats.version} · ${stats.device}`);
 
-    // 2) 上传
     const input = await readInputImage(options.image);
-    const formData = new FormData();
-    formData.append('image', new Blob([input.buffer], { type: input.type }), input.filename);
-    formData.append('type', 'input');
-    formData.append('overwrite', 'true');
-    const uploadResponse = await fetch(`${server}/upload/image`, { method: 'POST', body: formData });
-    const uploadPayload = await uploadResponse.json().catch(() => null);
-    if (!uploadResponse.ok || !uploadPayload || !uploadPayload.name) {
-        throw new Error(`上传失败（HTTP ${uploadResponse.status}）：${JSON.stringify(uploadPayload)}`);
-    }
-    const imageName = uploadPayload.subfolder ? `${uploadPayload.subfolder}/${uploadPayload.name}` : uploadPayload.name;
+    const seed = randomSeed();
+    let imageName = '';
+    const uploadedName = await uploadImage(server, '', input.buffer, input.filename, input.type);
+    imageName = uploadedName;
     console.log(`[2/5] 上传成功：${imageName}`);
 
-    // 3) 提交
-    const workflow = buildWorkflow(options, imageName, options.prompt, randomSeed());
-    const promptResponse = await fetch(`${server}/prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: workflow, client_id: `magicwand-smoke-${randomUUID()}` })
+    const workflow = buildWorkflow({
+        imageName,
+        prompt: options.prompt,
+        seed,
+        clipName: options.clip,
+        clipType: options.clipType,
+        vaeName: options.vae,
+        unetName: options.unet,
+        megapixels: options.megapixels,
+        refResolution: options.refResolution,
+        steps: options.steps,
+        cfg: options.cfg,
+        samplerName: options.sampler,
+        scheduler: options.scheduler,
+        loras: options.loras,
+        filenamePrefix: 'magicwand-smoke'
     });
-    const promptPayload = await promptResponse.json().catch(() => null);
-    if (!promptResponse.ok || !promptPayload || !promptPayload.prompt_id) {
-        throw new Error(`提交工作流失败：${formatComfyError(promptPayload, `HTTP ${promptResponse.status}`)}`);
-    }
-    const promptId = promptPayload.prompt_id;
-    console.log(`[3/5] 已提交：${promptId}（前面还有 ${promptPayload.number || 0} 个任务）`);
+    const promptPayload = await queuePrompt(server, '', workflow, `magicwand-smoke-${randomUUID()}`);
+    console.log(`[3/5] 已提交：${promptPayload.prompt_id}（前面还有 ${promptPayload.number || 0} 个任务）`);
 
-    // 4) 轮询
-    const deadline = Date.now() + options.timeout * 1000;
-    let imageInfo = null;
-    while (Date.now() < deadline) {
-        await sleep(2000);
-        const historyResponse = await fetch(`${server}/history/${promptId}`);
-        if (!historyResponse.ok) continue;
-        const history = await historyResponse.json();
-        const entry = history[promptId];
-        if (!entry) {
-            const queueResponse = await fetch(`${server}/prompt`);
-            if (queueResponse.ok) {
-                const queuePayload = await queueResponse.json();
-                const remaining = queuePayload.exec_info ? queuePayload.exec_info.queue_remaining : null;
-                process.stdout.write(`\r[4/5] 等待中 ${Math.round((Date.now() - startedAt) / 1000)}s，队列剩余 ${remaining}   `);
-            }
-            continue;
+    const imageInfo = await waitForImage(server, '', promptPayload.prompt_id, {
+        timeoutSec: options.timeout,
+        pollMs: 2000,
+        startedAt,
+        onTick({ elapsed, queueRemaining }) {
+            process.stdout.write(`\r[4/5] 等待中 ${Math.round(elapsed)}s，队列剩余 ${queueRemaining}   `);
         }
-        if (entry.status && entry.status.status_str === 'error') {
-            throw new Error(`生成失败：${JSON.stringify(entry.status.messages || [])}`);
-        }
-        if (entry.status && entry.status.completed) {
-            const images = Object.values(entry.outputs || {}).flatMap((output) => output.images || []);
-            if (!images.length) throw new Error('生成完成但没有输出图片');
-            imageInfo = images[0];
-            break;
-        }
-    }
+    });
     console.log('');
-    if (!imageInfo) {
-        throw new Error(`等待超时（${options.timeout}s）`);
-    }
     console.log(`[4/5] 生成完成，用时 ${((Date.now() - startedAt) / 1000).toFixed(1)}s：${imageInfo.filename}`);
 
-    // 5) 下载
-    const query = new URLSearchParams({
-        filename: imageInfo.filename,
-        subfolder: imageInfo.subfolder || '',
-        type: imageInfo.type || 'output'
-    });
-    const viewResponse = await fetch(`${server}/view?${query}`);
-    if (!viewResponse.ok) {
-        throw new Error(`下载结果失败：HTTP ${viewResponse.status}`);
-    }
-    const buffer = Buffer.from(await viewResponse.arrayBuffer());
+    const buffer = await downloadImage(server, '', imageInfo);
     await writeFile(options.out, buffer);
     console.log(`[5/5] 已保存：${options.out}（${(buffer.length / 1024).toFixed(0)} KB）`);
     console.log(`冒烟测试通过，总耗时 ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);

@@ -1,0 +1,3 @@
+tools/preview-out/
+tools/preview-config.json
+.playwright-cli/
