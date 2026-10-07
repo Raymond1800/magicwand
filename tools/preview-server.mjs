@@ -14,7 +14,7 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ComfyCancelled, cancelJob, downloadImage, getSystemStats, queuePrompt, uploadImage, waitForImage } from './comfy-client.mjs';
+import { ComfyCancelled, cancelJob, downloadImage, getSystemStats, listLoras, queuePrompt, uploadImage, waitForImage } from './comfy-client.mjs';
 import { buildWorkflow, randomSeed } from './comfy-workflow.mjs';
 import { loadCatalog, resolveJobs } from './prompt-catalog.mjs';
 
@@ -87,6 +87,16 @@ function settingsFrom(body, defaults) {
         clipName: String(body.clipName || defaults.clipName),
         vaeName: String(body.vaeName || defaults.vaeName)
     };
+}
+
+function qwenDirectoryLoras(names) {
+    return names
+        .map((name) => String(name || '').replace(/\\/g, '/').trim())
+        .filter((name) => {
+            const slash = name.indexOf('/');
+            return slash > 0 && name.slice(0, slash) === 'qwen';
+        })
+        .sort((a, b) => a.localeCompare(b, 'zh'));
 }
 
 function workflowOptions(settings, imageName, job, seed) {
@@ -401,6 +411,18 @@ async function handle(req, res) {
             applyTls(settings.insecure);
             const stats = await getSystemStats(settings.server, settings.apiKey);
             sendJson(res, 200, stats);
+            return;
+        }
+        if (req.method === 'POST' && url.pathname === '/api/loras') {
+            const body = JSON.parse((await readRequest(req)).toString('utf8') || '{}');
+            const settings = settingsFrom(body, catalog.defaults);
+            if (!settings.server) {
+                sendJson(res, 400, { error: '先填写 ComfyUI 地址' });
+                return;
+            }
+            applyTls(settings.insecure);
+            const loras = qwenDirectoryLoras(await listLoras(settings.server, settings.apiKey));
+            sendJson(res, 200, { loras });
             return;
         }
         if (req.method === 'POST' && url.pathname === '/api/runs') {

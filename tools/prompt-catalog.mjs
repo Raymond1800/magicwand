@@ -94,14 +94,45 @@ function readDefaultNumber(block, name) {
     return Number(matched[1]);
 }
 
+// 与 magicwand.user.js 的 mergeDecoratorsWithPrompt 保持同构。
+const NUDE_DECORATOR_PROMPT = '脱掉<image1>中女性的上衣、下装和内衣，让身体完全裸露';
+
+function stripDecoratorPunctuation(item) {
+    return String(item).replace(/[。.\s]+$/u, '');
+}
+
+function isNudeDecoratorPrompt(item) {
+    return stripDecoratorPunctuation(item) === NUDE_DECORATOR_PROMPT;
+}
+
 export function mergeDecorators(prompt, decorators) {
-    if (!decorators || decorators.length === 0) {
-        return String(prompt || '').replace(/\{decorator\}/g, '');
+    const list = Array.isArray(decorators) ? decorators : [];
+    const nude = list.some(isNudeDecoratorPrompt);
+    const rest = list.filter((item) => !isNudeDecoratorPrompt(item)).map(stripDecoratorPunctuation);
+    const source = String(prompt || '');
+    const hasClothingSlot = /\{clothing(?::[^}]*)?\}/.test(source);
+    let resolved = source.replace(/\{clothing(?::([^}]*))?\}/g, (_, custom) => {
+        const sentence = nude
+            ? NUDE_DECORATOR_PROMPT
+            : stripDecoratorPunctuation(custom && custom.trim() ? custom : '服装保持原样');
+        return `${sentence}。`;
+    });
+    const pieces = rest.slice();
+    const clothingLocked = /脱掉|全身裸露|服装保持原样/.test(resolved);
+    if (nude && !hasClothingSlot && !clothingLocked) {
+        if (resolved.includes('其余保持不变') && !/衣|脱掉|裸/.test(resolved)) {
+            resolved = resolved.replace('其余保持不变', '姿态、背景和光线保持不变');
+            pieces.unshift(NUDE_DECORATOR_PROMPT);
+        } else if (!resolved.includes('其余保持不变')) {
+            pieces.unshift(NUDE_DECORATOR_PROMPT);
+        }
     }
-    const useChinese = decorators.some((item) => /[\u4e00-\u9fff]/.test(item));
+    if (pieces.length === 0) {
+        return resolved.replace(/\{decorator\}/g, '');
+    }
+    const useChinese = pieces.some((item) => /[\u4e00-\u9fff]/.test(item));
     const joiner = useChinese ? '。' : '. ';
-    const merged = decorators.map((item) => String(item).replace(/[。.\s]+$/u, '')).join(joiner) + joiner;
-    return String(prompt || '').replace(/\{decorator\}/g, merged);
+    return resolved.replace(/\{decorator\}/g, pieces.join(joiner) + joiner);
 }
 
 export function parseCatalog(source) {

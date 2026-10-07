@@ -51,6 +51,19 @@
     }
     textarea { min-height: 72px; resize: vertical; }
     input[type="number"] { max-width: 120px; }
+    .lora-stack { display: grid; gap: 8px; }
+    .lora-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .lora-catalog { display: grid; gap: 6px; max-height: 360px; overflow: auto; }
+    .lora-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 72px auto;
+        gap: 8px;
+        align-items: center;
+    }
+    .lora-name { display: flex; gap: 6px; min-width: 0; align-items: baseline; }
+    .lora-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lora-tag { flex: none; color: var(--muted); font-size: 12px; }
+    .lora-strength { width: 72px; max-width: 72px; padding: 6px 8px; }
     .server-row, .nums { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .server-row input { flex: 1; min-width: 180px; }
     .check-line { display: flex; gap: 8px; align-items: center; }
@@ -241,7 +254,15 @@
                 <input id="timeout" type="number" min="1" step="1">
             </div>
             <span class="field">LoRA</span>
-            <textarea id="loraList" spellcheck="false" placeholder="每行 文件名@强度，留空则不加载"></textarea>
+            <div class="lora-stack">
+                <textarea id="loraList" spellcheck="false" placeholder="调试列表：每行 文件名@强度，留空则不加载"></textarea>
+                <div class="lora-head">
+                    <span class="hint">qwen 目录。点加入，按旁边的强度追加到调试列表。</span>
+                    <button type="button" id="loadLorasBtn">读取</button>
+                </div>
+                <p id="loraNote" class="hint"></p>
+                <div id="loraCatalog" class="lora-catalog"></div>
+            </div>
         </div>
         <details>
             <summary>模型文件</summary>
@@ -320,6 +341,7 @@
     let previewUrl = '';
     let renderedRunId = '';
     let pollTimer = null;
+    let qwenLoras = [];
 
     function setStatus(text) {
         document.getElementById('status').textContent = text || '';
@@ -353,6 +375,106 @@
         document.getElementById('vaeName').value = saved.vaeName || defaults.vaeName || '';
     }
 
+    function loraNameSet(text) {
+        const names = new Set();
+        String(text || '').split('\n').forEach((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+            const at = trimmed.lastIndexOf('@');
+            names.add((at > 0 ? trimmed.slice(0, at) : trimmed).trim());
+        });
+        return names;
+    }
+
+    function strengthText(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? String(number) : '1';
+    }
+
+    function syncLoraButtons() {
+        const names = loraNameSet(document.getElementById('loraList').value);
+        document.querySelectorAll('.lora-row').forEach((row) => {
+            const button = row.querySelector('.lora-add');
+            const added = names.has(row.dataset.name);
+            button.disabled = added;
+            button.textContent = added ? '已加入' : '加入';
+        });
+    }
+
+    function addLora(name, strengthValue) {
+        const box = document.getElementById('loraList');
+        if (loraNameSet(box.value).has(name)) return;
+        const line = `${name}@${strengthText(strengthValue)}`;
+        const current = box.value.replace(/\s+$/, '');
+        box.value = current ? `${current}\n${line}` : line;
+        syncLoraButtons();
+    }
+
+    function renderLoraCatalog() {
+        const root = document.getElementById('loraCatalog');
+        const defaults = loraNameSet(catalog && catalog.defaults ? catalog.defaults.loraList : '');
+        root.replaceChildren();
+        qwenLoras.forEach((name) => {
+            const row = document.createElement('div');
+            row.className = 'lora-row';
+            row.dataset.name = name;
+            const label = document.createElement('span');
+            label.className = 'lora-name';
+            label.title = name;
+            const file = document.createElement('span');
+            file.className = 'lora-file';
+            file.textContent = name.startsWith('qwen/') ? name.slice('qwen/'.length) : name;
+            label.appendChild(file);
+            if (defaults.has(name)) {
+                const tag = document.createElement('span');
+                tag.className = 'lora-tag';
+                tag.textContent = '默认';
+                label.appendChild(tag);
+            }
+            const strength = document.createElement('input');
+            strength.type = 'number';
+            strength.className = 'lora-strength';
+            strength.value = '1';
+            strength.step = '0.1';
+            strength.setAttribute('aria-label', `${file.textContent} 强度`);
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'lora-add';
+            button.addEventListener('click', () => addLora(name, strength.value));
+            row.append(label, strength, button);
+            root.appendChild(row);
+        });
+        syncLoraButtons();
+    }
+
+    async function loadQwenLoras() {
+        const note = document.getElementById('loraNote');
+        const button = document.getElementById('loadLorasBtn');
+        const settings = currentSettings();
+        if (!settings.server) {
+            note.textContent = '先填写 ComfyUI 地址';
+            return;
+        }
+        button.disabled = true;
+        note.textContent = '正在读取 qwen 目录…';
+        try {
+            const response = await fetch('/api/loras', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.error || '读取失败');
+            qwenLoras = Array.isArray(payload.loras) ? payload.loras : [];
+            note.textContent = qwenLoras.length ? `qwen 目录 ${qwenLoras.length} 个` : 'qwen 目录里没有 LoRA';
+            renderLoraCatalog();
+        } catch (error) {
+            note.textContent = error.message || '读取失败';
+        } finally {
+            button.disabled = false;
+        }
+    }
+
     function selectedJobIds() {
         return [...document.querySelectorAll('.job:checked')].map((box) => box.value);
     }
@@ -368,8 +490,8 @@
     function updateDecoratorNote() {
         const count = selectedDecoratorIds().length;
         document.getElementById('decoratorNote').textContent = count
-            ? `已选 ${count} 个。会插入带 {decorator} 的提示词，拆解不使用装饰。`
-            : '默认不选。只插入带 {decorator} 的提示词，拆解不使用装饰。';
+            ? `已选 ${count} 个。普通装饰插入带 {decorator} 的提示词。「裸体」替换服装槽。拆解不使用装饰。`
+            : '默认不选。普通装饰插入带 {decorator} 的提示词。「裸体」会把服装槽换成脱衣。拆解不使用装饰。';
     }
 
     function syncGroup(section) {
@@ -885,6 +1007,10 @@
         document.getElementById('light-close').focus();
     }
 
+    document.getElementById('loraList').addEventListener('input', syncLoraButtons);
+    document.getElementById('loadLorasBtn').addEventListener('click', () => {
+        loadQwenLoras();
+    });
     document.getElementById('checkAll').addEventListener('click', () => setAllJobs(true));
     document.getElementById('checkNone').addEventListener('click', () => setAllJobs(false));
     document.getElementById('testBtn').addEventListener('click', async () => {
@@ -902,6 +1028,7 @@
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.error || '连接失败');
             setStatus(`已连接 ${payload.device} · ComfyUI ${payload.version}`);
+            loadQwenLoras();
         } catch (error) {
             setStatus(error.message || '连接失败');
         }
@@ -957,6 +1084,7 @@
         catalog = data;
         fillSettings(data.saved || {}, data.defaults || {});
         renderCatalog(data);
+        loadQwenLoras();
         const total = data.groups.reduce((sum, group) => sum + group.items.length, 0);
         document.getElementById('lead').textContent = `读取当前脚本里的提示词，串行调用 ComfyUI。全部勾选是 ${total} 张。刷新只回看结果，不会自动续跑。`;
         await refreshRuns();

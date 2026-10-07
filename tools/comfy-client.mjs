@@ -45,6 +45,15 @@ export async function getSystemStats(server, apiKey) {
     return { device, version };
 }
 
+export async function listLoras(server, apiKey) {
+    const response = await comfyFetch(server, apiKey, '/models/loras', { timeoutMs: 30000 });
+    const payload = await readJson(response);
+    if (!response.ok || !Array.isArray(payload)) {
+        throw new Error(`读取 LoRA 列表失败（HTTP ${response.status}）`);
+    }
+    return payload.map((item) => String(item && typeof item === 'object' ? (item.name || '') : item));
+}
+
 export async function uploadImage(server, apiKey, buffer, filename, mime) {
     const formData = new FormData();
     formData.append('image', new Blob([buffer], { type: mime || 'image/png' }), filename || 'upload.png');
